@@ -1,15 +1,18 @@
 package handlers
 
 import (
+	"encoding/json"
 	"gobi/config"
 	"gobi/internal/models"
 	"gobi/pkg/database"
+	"gobi/pkg/errors"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // Auth handlers
@@ -20,18 +23,22 @@ func Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&login); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid login request", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid login request"))
+		}
 		return
 	}
 
 	var user models.User
 	if err := database.DB.Where("username = ?", login.Username).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.Error(errors.ErrInvalidCredentials)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.Error(errors.ErrInvalidCredentials)
 		return
 	}
 
@@ -44,7 +51,7 @@ func Login(c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(cfg.JWT.Secret))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		c.Error(errors.WrapError(err, "Could not generate token"))
 		return
 	}
 
@@ -58,13 +65,32 @@ func Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&register); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid registration request", err))
+		} else if errors.As(err, &syntaxErr) || errors.As(err, &typeErr) {
+			c.Error(errors.NewBadRequestError("Invalid JSON format", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid registration request"))
+		}
+		return
+	}
+
+	// 检查用户名是否已存在
+	var existingUser models.User
+	err := database.DB.Where("username = ?", register.Username).First(&existingUser).Error
+	if err == nil {
+		c.Error(errors.NewConflictError("User already exists", nil))
+		return
+	} else if err != gorm.ErrRecordNotFound {
+		c.Error(errors.WrapError(err, "Database error"))
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(register.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not hash password"})
+		c.Error(errors.WrapError(err, "Could not hash password"))
 		return
 	}
 
@@ -75,7 +101,7 @@ func Register(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create user"})
+		c.Error(errors.WrapError(err, "Could not create user"))
 		return
 	}
 
@@ -86,7 +112,15 @@ func Register(c *gin.Context) {
 func CreateQuery(c *gin.Context) {
 	var query models.Query
 	if err := c.ShouldBindJSON(&query); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid query data", err))
+		} else if errors.As(err, &syntaxErr) || errors.As(err, &typeErr) {
+			c.Error(errors.NewBadRequestError("Invalid JSON format", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid query data"))
+		}
 		return
 	}
 
@@ -94,7 +128,7 @@ func CreateQuery(c *gin.Context) {
 	query.UserID = userID.(uint)
 
 	if err := database.DB.Create(&query).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create query"})
+		c.Error(errors.WrapError(err, "Could not create query"))
 		return
 	}
 
@@ -123,14 +157,14 @@ func GetQuery(c *gin.Context) {
 	id := c.Param("id")
 	var query models.Query
 	if err := database.DB.First(&query, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Query not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	role, _ := c.Get("role")
 	if role.(string) != "admin" && query.UserID != userID.(uint) && !query.IsPublic {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
@@ -141,23 +175,31 @@ func UpdateQuery(c *gin.Context) {
 	id := c.Param("id")
 	var query models.Query
 	if err := database.DB.First(&query, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Query not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if query.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
 	if err := c.ShouldBindJSON(&query); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid query data", err))
+		} else if errors.As(err, &syntaxErr) || errors.As(err, &typeErr) {
+			c.Error(errors.NewBadRequestError("Invalid JSON format", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid query data"))
+		}
 		return
 	}
 
 	if err := database.DB.Save(&query).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update query"})
+		c.Error(errors.WrapError(err, "Could not update query"))
 		return
 	}
 
@@ -168,18 +210,18 @@ func DeleteQuery(c *gin.Context) {
 	id := c.Param("id")
 	var query models.Query
 	if err := database.DB.First(&query, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Query not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if query.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
 	if err := database.DB.Delete(&query).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete query"})
+		c.Error(errors.WrapError(err, "Could not delete query"))
 		return
 	}
 
@@ -190,7 +232,15 @@ func DeleteQuery(c *gin.Context) {
 func CreateChart(c *gin.Context) {
 	var chart models.Chart
 	if err := c.ShouldBindJSON(&chart); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid chart data", err))
+		} else if errors.As(err, &syntaxErr) || errors.As(err, &typeErr) {
+			c.Error(errors.NewBadRequestError("Invalid JSON format", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid chart data"))
+		}
 		return
 	}
 
@@ -198,7 +248,7 @@ func CreateChart(c *gin.Context) {
 	chart.UserID = userID.(uint)
 
 	if err := database.DB.Create(&chart).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create chart"})
+		c.Error(errors.WrapError(err, "Could not create chart"))
 		return
 	}
 
@@ -221,13 +271,13 @@ func GetChart(c *gin.Context) {
 	id := c.Param("id")
 	var chart models.Chart
 	if err := database.DB.First(&chart, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chart not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if chart.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
@@ -238,23 +288,31 @@ func UpdateChart(c *gin.Context) {
 	id := c.Param("id")
 	var chart models.Chart
 	if err := database.DB.First(&chart, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chart not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if chart.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
 	if err := c.ShouldBindJSON(&chart); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid chart data", err))
+		} else if errors.As(err, &syntaxErr) || errors.As(err, &typeErr) {
+			c.Error(errors.NewBadRequestError("Invalid JSON format", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid chart data"))
+		}
 		return
 	}
 
 	if err := database.DB.Save(&chart).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update chart"})
+		c.Error(errors.WrapError(err, "Could not update chart"))
 		return
 	}
 
@@ -265,18 +323,18 @@ func DeleteChart(c *gin.Context) {
 	id := c.Param("id")
 	var chart models.Chart
 	if err := database.DB.First(&chart, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chart not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if chart.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
 	if err := database.DB.Delete(&chart).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete chart"})
+		c.Error(errors.WrapError(err, "Could not delete chart"))
 		return
 	}
 
@@ -287,13 +345,17 @@ func DeleteChart(c *gin.Context) {
 func CreateTemplate(c *gin.Context) {
 	file, err := c.FormFile("template")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		if errors.IsContentTypeError(err) {
+			c.Error(errors.NewBadRequestError("No file uploaded", err))
+		} else {
+			c.Error(errors.WrapError(err, "No file uploaded"))
+		}
 		return
 	}
 
 	openedFile, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not open file"})
+		c.Error(errors.WrapError(err, "Could not open file"))
 		return
 	}
 	defer openedFile.Close()
@@ -305,12 +367,12 @@ func CreateTemplate(c *gin.Context) {
 	}
 
 	if _, err := openedFile.Read(template.Template); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read file"})
+		c.Error(errors.WrapError(err, "Could not read file"))
 		return
 	}
 
 	if err := database.DB.Create(&template).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save template"})
+		c.Error(errors.WrapError(err, "Could not save template"))
 		return
 	}
 
@@ -333,13 +395,13 @@ func GetTemplate(c *gin.Context) {
 	id := c.Param("id")
 	var template models.ExcelTemplate
 	if err := database.DB.First(&template, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if template.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
@@ -350,25 +412,29 @@ func UpdateTemplate(c *gin.Context) {
 	id := c.Param("id")
 	var template models.ExcelTemplate
 	if err := database.DB.First(&template, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if template.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
 	file, err := c.FormFile("template")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		if errors.IsContentTypeError(err) {
+			c.Error(errors.NewBadRequestError("No file uploaded", err))
+		} else {
+			c.Error(errors.WrapError(err, "No file uploaded"))
+		}
 		return
 	}
 
 	openedFile, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not open file"})
+		c.Error(errors.WrapError(err, "Could not open file"))
 		return
 	}
 	defer openedFile.Close()
@@ -376,12 +442,12 @@ func UpdateTemplate(c *gin.Context) {
 	template.Name = file.Filename
 	template.Template = make([]byte, file.Size)
 	if _, err := openedFile.Read(template.Template); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read file"})
+		c.Error(errors.WrapError(err, "Could not read file"))
 		return
 	}
 
 	if err := database.DB.Save(&template).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update template"})
+		c.Error(errors.WrapError(err, "Could not update template"))
 		return
 	}
 
@@ -392,18 +458,18 @@ func DeleteTemplate(c *gin.Context) {
 	id := c.Param("id")
 	var template models.ExcelTemplate
 	if err := database.DB.First(&template, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+		c.Error(errors.ErrNotFound)
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	if template.UserID != userID.(uint) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		c.Error(errors.ErrForbidden)
 		return
 	}
 
 	if err := database.DB.Delete(&template).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete template"})
+		c.Error(errors.WrapError(err, "Could not delete template"))
 		return
 	}
 

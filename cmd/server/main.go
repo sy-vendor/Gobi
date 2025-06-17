@@ -19,7 +19,12 @@ func main() {
 	}
 
 	// Create Gin router
-	r := gin.Default()
+	r := gin.New()
+
+	// Add middleware
+	r.Use(middleware.Recovery())
+	r.Use(middleware.ErrorHandler())
+	r.Use(gin.Logger())
 
 	// Public routes
 	r.POST("/api/auth/login", handlers.Login)
