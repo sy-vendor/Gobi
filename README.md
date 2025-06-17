@@ -24,7 +24,7 @@ A minimal viable product (MVP) for a Business Intelligence engine built with Go.
 
 1. Clone the repository | 克隆仓库:
 ```bash
-git clone https://github.com/yourusername/gobi.git
+git clone https://github.com/sy-vendor/gobi.git
 cd gobi
 ```
 
