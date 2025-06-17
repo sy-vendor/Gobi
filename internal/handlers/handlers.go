@@ -47,6 +47,10 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// 更新最后登录时间
+	user.LastLogin = time.Now()
+	database.DB.Save(&user)
+
 	cfg := config.DefaultConfig
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
@@ -66,6 +70,7 @@ func Login(c *gin.Context) {
 func Register(c *gin.Context) {
 	var register struct {
 		Username string `json:"username" binding:"required"`
+		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
 		IsAdmin  bool   `json:"is_admin"`
 	}
@@ -83,11 +88,11 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// 检查用户名是否已存在
+	// 检查用户名或邮箱是否已存在
 	var existingUser models.User
-	err := database.DB.Where("username = ?", register.Username).First(&existingUser).Error
+	err := database.DB.Where("username = ? OR email = ?", register.Username, register.Email).First(&existingUser).Error
 	if err == nil {
-		c.Error(errors.NewConflictError("User already exists", nil))
+		c.Error(errors.NewConflictError("User or email already exists", nil))
 		return
 	} else if err != gorm.ErrRecordNotFound {
 		c.Error(errors.WrapError(err, "Database error"))
@@ -107,6 +112,7 @@ func Register(c *gin.Context) {
 
 	user := models.User{
 		Username: register.Username,
+		Email:    register.Email,
 		Password: string(hashedPassword),
 		Role:     role,
 	}
@@ -766,4 +772,151 @@ func ClearCache(c *gin.Context) {
 		utils.QueryCache.Flush()
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Cache cleared"})
+}
+
+// Dashboard stats handler
+func DashboardStats(c *gin.Context) {
+	var totalQueries int64
+	var totalCharts int64
+	var totalUsers int64
+	var todayQueries int64
+
+	today := time.Now().Format("2006-01-02")
+	database.DB.Model(&models.Query{}).Count(&totalQueries)
+	database.DB.Model(&models.Chart{}).Count(&totalCharts)
+	database.DB.Model(&models.User{}).Count(&totalUsers)
+	database.DB.Model(&models.Query{}).Where("DATE(created_at) = ?", today).Count(&todayQueries)
+
+	c.JSON(http.StatusOK, gin.H{
+		"totalQueries": totalQueries,
+		"totalCharts":  totalCharts,
+		"totalUsers":   totalUsers,
+		"todayQueries": todayQueries,
+	})
+}
+
+// List users handler
+func ListUsers(c *gin.Context) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+		return
+	}
+	var users []struct {
+		ID        uint      `json:"id"`
+		Username  string    `json:"username"`
+		Email     string    `json:"email"`
+		Role      string    `json:"role"`
+		CreatedAt time.Time `json:"created_at"`
+		LastLogin time.Time `json:"last_login"`
+	}
+	dbUsers := []models.User{}
+	if err := database.DB.Find(&dbUsers).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch users"})
+		return
+	}
+	for _, u := range dbUsers {
+		users = append(users, struct {
+			ID        uint      `json:"id"`
+			Username  string    `json:"username"`
+			Email     string    `json:"email"`
+			Role      string    `json:"role"`
+			CreatedAt time.Time `json:"created_at"`
+			LastLogin time.Time `json:"last_login"`
+		}{
+			ID:        u.ID,
+			Username:  u.Username,
+			Email:     u.Email,
+			Role:      u.Role,
+			CreatedAt: u.CreatedAt,
+			LastLogin: u.LastLogin,
+		})
+	}
+	c.JSON(http.StatusOK, users)
+}
+
+// Update user handler
+func UpdateUser(c *gin.Context) {
+	id := c.Param("id")
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && toString(userID) != id {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+		return
+	}
+	var user models.User
+	if err := database.DB.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	var req struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Role     string `json:"role"`
+		Password string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	if req.Username != "" {
+		user.Username = req.Username
+	}
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+	if req.Role != "" {
+		if role.(string) != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only admin can change role"})
+			return
+		}
+		user.Role = req.Role
+	}
+	if req.Password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not hash password"})
+			return
+		}
+		user.Password = string(hashed)
+	}
+	if err := database.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update user"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
+}
+
+// Reset user password handler
+func ResetUserPassword(c *gin.Context) {
+	id := c.Param("id")
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && toString(userID) != id {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+		return
+	}
+	var user models.User
+	if err := database.DB.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password is required"})
+		return
+	}
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not hash password"})
+		return
+	}
+	user.Password = string(hashed)
+	if err := database.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reset password"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 }

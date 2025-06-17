@@ -69,6 +69,16 @@ func main() {
 
 		// Cache clear (admin only)
 		authorized.POST("/cache/clear", handlers.ClearCache)
+
+		// Dashboard stats
+		authorized.GET("/dashboard/stats", handlers.DashboardStats)
+
+		// User list
+		authorized.GET("/users", handlers.ListUsers)
+		// User update
+		authorized.PUT("/users/:id", handlers.UpdateUser)
+		// User reset password
+		authorized.POST("/users/:id/reset-password", handlers.ResetUserPassword)
 	}
 
 	// Start server

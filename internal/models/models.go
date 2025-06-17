@@ -1,14 +1,18 @@
 package models
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
 type User struct {
 	gorm.Model
-	Username string `gorm:"uniqueIndex"`
-	Password string
-	Role     string // admin or user
+	Username  string `gorm:"uniqueIndex"`
+	Email     string `gorm:"uniqueIndex"`
+	Password  string
+	Role      string    // admin or user
+	LastLogin time.Time `json:"last_login"`
 }
 
 type DataSource struct {
