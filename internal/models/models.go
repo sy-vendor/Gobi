@@ -28,7 +28,7 @@ type Chart struct {
 	UserID  uint
 	User    User
 	Name    string
-	Type    string // bar, line, pie
+	Type    string // bar, line, pie, scatter, radar, heatmap, gauge, funnel
 	Config  string // JSON configuration
 	Data    string // JSON data
 }

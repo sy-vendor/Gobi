@@ -13,7 +13,15 @@ A minimal viable product (MVP) for a Business Intelligence engine built with Go.
 - Excel template management and export | Excel 模板管理和导出
 - User authentication and authorization | 用户认证和授权
 - Data isolation between users | 用户数据隔离
-- Support for multiple chart types (bar, line, pie) | 支持多种图表类型（柱状图、折线图、饼图）
+- Support for multiple chart types | 支持多种图表类型
+  - Bar charts | 柱状图
+  - Line charts | 折线图
+  - Pie charts | 饼图
+  - Scatter plots | 散点图
+  - Radar charts | 雷达图
+  - Heat maps | 热力图
+  - Gauge charts | 仪表盘
+  - Funnel charts | 漏斗图
 
 ## Prerequisites | 环境要求
 

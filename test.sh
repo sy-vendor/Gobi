@@ -86,6 +86,18 @@ curl -s -X GET http://localhost:8080/api/queries/$QUERY_ID \
 
 # 7. 测试图表类型
 echo -e "\n${GREEN}7. 测试不同图表类型${NC}"
+# 创建柱状图
+curl -s -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "柱状图测试",
+    "type": "bar",
+    "queryId": '$QUERY_ID',
+    "config": "{\"title\":\"柱状图测试\",\"xAxis\":{\"type\":\"category\"},\"yAxis\":{\"type\":\"value\"}}",
+    "data": "{\"categories\":[\"A\",\"B\",\"C\"],\"values\":[10,20,30]}"
+  }'
+
 # 创建折线图
 curl -s -X POST http://localhost:8080/api/charts \
   -H "Content-Type: application/json" \
@@ -108,6 +120,66 @@ curl -s -X POST http://localhost:8080/api/charts \
     "queryId": '$QUERY_ID',
     "config": "{\"title\":\"饼图测试\"}",
     "data": "{\"items\":[{\"name\":\"A\",\"value\":30},{\"name\":\"B\",\"value\":40},{\"name\":\"C\",\"value\":30}]}"
+  }'
+
+# 创建散点图
+curl -s -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "散点图测试",
+    "type": "scatter",
+    "queryId": '$QUERY_ID',
+    "config": "{\"title\":\"散点图测试\",\"xAxis\":{\"type\":\"value\"},\"yAxis\":{\"type\":\"value\"}}",
+    "data": "{\"points\":[{\"x\":10,\"y\":20},{\"x\":15,\"y\":25},{\"x\":20,\"y\":30}]}"
+  }'
+
+# 创建雷达图
+curl -s -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "雷达图测试",
+    "type": "radar",
+    "queryId": '$QUERY_ID',
+    "config": "{\"title\":\"雷达图测试\",\"radar\":{\"indicator\":[{\"name\":\"指标1\",\"max\":100},{\"name\":\"指标2\",\"max\":100},{\"name\":\"指标3\",\"max\":100}]}}",
+    "data": "{\"values\":[80,70,90]}"
+  }'
+
+# 创建热力图
+curl -s -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "热力图测试",
+    "type": "heatmap",
+    "queryId": '$QUERY_ID',
+    "config": "{\"title\":\"热力图测试\",\"xAxis\":{\"type\":\"category\",\"data\":[\"A\",\"B\",\"C\"]},\"yAxis\":{\"type\":\"category\",\"data\":[\"X\",\"Y\",\"Z\"]}}",
+    "data": "{\"data\":[[10,20,30],[40,50,60],[70,80,90]]}"
+  }'
+
+# 创建仪表盘
+curl -s -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "仪表盘测试",
+    "type": "gauge",
+    "queryId": '$QUERY_ID',
+    "config": "{\"title\":\"仪表盘测试\",\"min\":0,\"max\":100}",
+    "data": "{\"value\":75}"
+  }'
+
+# 创建漏斗图
+curl -s -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "漏斗图测试",
+    "type": "funnel",
+    "queryId": '$QUERY_ID',
+    "config": "{\"title\":\"漏斗图测试\"}",
+    "data": "{\"items\":[{\"name\":\"访问\",\"value\":100},{\"name\":\"注册\",\"value\":80},{\"name\":\"下单\",\"value\":60},{\"name\":\"支付\",\"value\":40},{\"name\":\"完成\",\"value\":20}]}"
   }'
 
 # 清理测试文件
