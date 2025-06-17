@@ -24,7 +24,7 @@ A minimal viable product (MVP) for a Business Intelligence engine built with Go.
 
 1. Clone the repository | 克隆仓库:
 ```bash
-git clone https://github.com/sy-vendor/gobi.git
+git clone https://github.com/yourusername/gobi.git
 cd gobi
 ```
 
@@ -164,12 +164,3 @@ gobi/
 chmod +x scripts/test_error_handling.sh
 ./scripts/test_error_handling.sh
 ```
-
-## Future Improvements | 未来改进
-
-1. Add more chart types | 添加更多图表类型
-2. Implement data source configuration | 实现数据源配置
-3. Add query result caching | 添加查询结果缓存
-4. Implement more complex permission control | 实现更复杂的权限控制
-5. Add frontend interface | 添加前端界面
-6. Add unit tests and integration tests | 添加单元测试和集成测试
