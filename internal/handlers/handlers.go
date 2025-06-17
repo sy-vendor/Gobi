@@ -6,8 +6,13 @@ import (
 	"gobi/internal/models"
 	"gobi/pkg/database"
 	"gobi/pkg/errors"
+	"gobi/pkg/utils"
 	"net/http"
 	"time"
+
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -62,6 +67,7 @@ func Register(c *gin.Context) {
 	var register struct {
 		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
+		IsAdmin  bool   `json:"is_admin"`
 	}
 
 	if err := c.ShouldBindJSON(&register); err != nil {
@@ -94,10 +100,15 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	role := "user"
+	if register.IsAdmin {
+		role = "admin"
+	}
+
 	user := models.User{
 		Username: register.Username,
 		Password: string(hashedPassword),
-		Role:     "user",
+		Role:     role,
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -132,6 +143,8 @@ func CreateQuery(c *gin.Context) {
 		return
 	}
 
+	utils.QueryCache.Flush()
+
 	c.JSON(http.StatusCreated, query)
 }
 
@@ -139,6 +152,12 @@ func ListQueries(c *gin.Context) {
 	var queries []models.Query
 	userID, _ := c.Get("userID")
 	role, _ := c.Get("role")
+
+	cacheKey := cacheKeyForListQueries(userID, role)
+	if cached, found := utils.GetQueryCache(cacheKey); found {
+		c.JSON(http.StatusOK, cached)
+		return
+	}
 
 	query := database.DB.Model(&models.Query{})
 	if role.(string) != "admin" {
@@ -150,24 +169,32 @@ func ListQueries(c *gin.Context) {
 		return
 	}
 
+	utils.SetQueryCache(cacheKey, queries, 5*time.Minute)
 	c.JSON(http.StatusOK, queries)
 }
 
 func GetQuery(c *gin.Context) {
 	id := c.Param("id")
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	cacheKey := cacheKeyForGetQuery(id, userID, role)
+	if cached, found := utils.GetQueryCache(cacheKey); found {
+		c.JSON(http.StatusOK, cached)
+		return
+	}
+
 	var query models.Query
 	if err := database.DB.First(&query, id).Error; err != nil {
 		c.Error(errors.ErrNotFound)
 		return
 	}
 
-	userID, _ := c.Get("userID")
-	role, _ := c.Get("role")
 	if role.(string) != "admin" && query.UserID != userID.(uint) && !query.IsPublic {
 		c.Error(errors.ErrForbidden)
 		return
 	}
 
+	utils.SetQueryCache(cacheKey, query, 5*time.Minute)
 	c.JSON(http.StatusOK, query)
 }
 
@@ -203,6 +230,8 @@ func UpdateQuery(c *gin.Context) {
 		return
 	}
 
+	utils.QueryCache.Flush()
+
 	c.JSON(http.StatusOK, query)
 }
 
@@ -224,6 +253,8 @@ func DeleteQuery(c *gin.Context) {
 		c.Error(errors.WrapError(err, "Could not delete query"))
 		return
 	}
+
+	utils.QueryCache.Flush()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Query deleted successfully"})
 }
@@ -508,6 +539,8 @@ func CreateDataSource(c *gin.Context) {
 		return
 	}
 
+	utils.QueryCache.Flush()
+
 	c.JSON(http.StatusCreated, dataSource)
 }
 
@@ -619,6 +652,8 @@ func UpdateDataSource(c *gin.Context) {
 		return
 	}
 
+	utils.QueryCache.Flush()
+
 	// 清除密码字段
 	dataSource.Password = ""
 
@@ -656,6 +691,8 @@ func DeleteDataSource(c *gin.Context) {
 		return
 	}
 
+	utils.QueryCache.Flush()
+
 	c.JSON(http.StatusOK, gin.H{"message": "Data source deleted successfully"})
 }
 
@@ -666,4 +703,67 @@ func encryptPassword(password string) (string, error) {
 		return "", err
 	}
 	return string(hashedPassword), nil
+}
+
+func cacheKeyForListQueries(userID interface{}, role interface{}) string {
+	key := "list_queries:" + toString(userID) + ":" + toString(role)
+	h := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(h[:])
+}
+
+func cacheKeyForGetQuery(id string, userID interface{}, role interface{}) string {
+	key := "get_query:" + id + ":" + toString(userID) + ":" + toString(role)
+	h := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(h[:])
+}
+
+func toString(v interface{}) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case int:
+		return fmt.Sprintf("%d", t)
+	case uint:
+		return fmt.Sprintf("%d", t)
+	default:
+		return ""
+	}
+}
+
+// 管理员手动清理缓存接口
+func ClearCache(c *gin.Context) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" {
+		c.Error(errors.ErrForbidden)
+		return
+	}
+	var req struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(errors.NewBadRequestError("Invalid request", err))
+		return
+	}
+	switch req.Type {
+	case "all":
+		utils.QueryCache.Flush()
+	case "query":
+		if req.ID != "" {
+			for k := range utils.QueryCache.Items() {
+				if len(k) > 9 && k[0:9] == "get_query:" && k[10:10+len(req.ID)] == req.ID {
+					utils.QueryCache.Delete(k)
+				}
+			}
+		}
+	case "list":
+		for k := range utils.QueryCache.Items() {
+			if len(k) > 12 && k[0:12] == "list_queries" {
+				utils.QueryCache.Delete(k)
+			}
+		}
+	default:
+		utils.QueryCache.Flush()
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Cache cleared"})
 }

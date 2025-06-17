@@ -5,7 +5,9 @@ import (
 	"gobi/internal/handlers"
 	"gobi/internal/middleware"
 	"gobi/pkg/database"
+	"gobi/pkg/utils"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,6 +19,9 @@ func main() {
 	if err := database.InitDB(&cfg); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	// Initialize query cache (default 5 min, cleanup 10 min)
+	utils.InitQueryCache(5*time.Minute, 10*time.Minute)
 
 	// Create Gin router
 	r := gin.New()
@@ -61,6 +66,9 @@ func main() {
 		authorized.GET("/templates/:id", handlers.GetTemplate)
 		authorized.PUT("/templates/:id", handlers.UpdateTemplate)
 		authorized.DELETE("/templates/:id", handlers.DeleteTemplate)
+
+		// Cache clear (admin only)
+		authorized.POST("/cache/clear", handlers.ClearCache)
 	}
 
 	// Start server
