@@ -22,11 +22,16 @@ A minimal viable product (MVP) for a Business Intelligence engine built with Go.
   - Heat maps | 热力图
   - Gauge charts | 仪表盘
   - Funnel charts | 漏斗图
+- Data source configuration | 数据源配置
+  - Support for multiple database types | 支持多种数据库类型
+  - Secure credential storage | 安全的凭证存储
+  - Public/private data source sharing | 公开/私有数据源共享
 
 ## Prerequisites | 环境要求
 
 - Go 1.21 or later | Go 1.21 或更高版本
 - SQLite (for development) | SQLite（用于开发）
+- MySQL/PostgreSQL (optional) | MySQL/PostgreSQL（可选）
 
 ## Installation | 安装步骤
 
@@ -65,6 +70,13 @@ go run cmd/server/main.go
 - POST /api/auth/register - Register a new user | 注册新用户
 - POST /api/auth/login - Login and get JWT token | 登录并获取 JWT 令牌
 
+### Data Sources | 数据源
+- POST /api/datasources - Create a new data source | 创建新数据源
+- GET /api/datasources - List all data sources | 列出所有数据源
+- GET /api/datasources/:id - Get a specific data source | 获取特定数据源
+- PUT /api/datasources/:id - Update a data source | 更新数据源
+- DELETE /api/datasources/:id - Delete a data source | 删除数据源
+
 ### Queries | 查询
 - POST /api/queries - Create a new query | 创建新查询
 - GET /api/queries - List all queries | 列出所有查询
@@ -102,12 +114,34 @@ curl -X POST http://localhost:8080/api/auth/login \
   -d '{"username":"testuser","password":"test123"}'
 ```
 
+### Create Data Source | 创建数据源
+```bash
+curl -X POST http://localhost:8080/api/datasources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_token>" \
+  -d '{
+    "name": "MySQL Database",
+    "type": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "database": "test_db",
+    "username": "test_user",
+    "password": "test_pass",
+    "description": "Test database",
+    "isPublic": true
+  }'
+```
+
 ### Create Query | 创建查询
 ```bash
 curl -X POST http://localhost:8080/api/queries \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your_token>" \
-  -d '{"name":"Test Query","sql":"SELECT * FROM users"}'
+  -d '{
+    "name": "Test Query",
+    "dataSourceId": 1,
+    "sql": "SELECT * FROM users"
+  }'
 ```
 
 ## Error Handling | 错误处理
@@ -136,6 +170,7 @@ curl -X POST http://localhost:8080/api/queries \
 - Passwords are hashed using bcrypt | 使用 bcrypt 加密密码
 - User data is isolated by default | 默认进行用户数据隔离
 - Admin users can access all data | 管理员可以访问所有数据
+- Database credentials are encrypted | 数据库凭证加密存储
 
 ## Project Structure | 项目结构
 

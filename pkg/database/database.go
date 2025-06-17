@@ -20,6 +20,7 @@ func InitDB(cfg *config.Config) error {
 	// Auto migrate the schema
 	err = DB.AutoMigrate(
 		&models.User{},
+		&models.DataSource{},
 		&models.Query{},
 		&models.Chart{},
 		&models.ExcelTemplate{},

@@ -11,14 +11,31 @@ type User struct {
 	Role     string // admin or user
 }
 
-type Query struct {
+type DataSource struct {
 	gorm.Model
 	UserID      uint
 	User        User
 	Name        string
-	SQL         string
+	Type        string // mysql, postgres, sqlite, etc.
+	Host        string
+	Port        int
+	Database    string
+	Username    string
+	Password    string
 	Description string
 	IsPublic    bool
+}
+
+type Query struct {
+	gorm.Model
+	UserID       uint
+	User         User
+	DataSourceID uint
+	DataSource   DataSource
+	Name         string
+	SQL          string
+	Description  string
+	IsPublic     bool
 }
 
 type Chart struct {

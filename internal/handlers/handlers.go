@@ -475,3 +475,195 @@ func DeleteTemplate(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Template deleted successfully"})
 }
+
+// DataSource handlers
+func CreateDataSource(c *gin.Context) {
+	var dataSource models.DataSource
+	if err := c.ShouldBindJSON(&dataSource); err != nil {
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid data source data", err))
+		} else if errors.As(err, &syntaxErr) || errors.As(err, &typeErr) {
+			c.Error(errors.NewBadRequestError("Invalid JSON format", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid data source data"))
+		}
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	dataSource.UserID = userID.(uint)
+
+	// 加密密码
+	encryptedPassword, err := encryptPassword(dataSource.Password)
+	if err != nil {
+		c.Error(errors.WrapError(err, "Could not encrypt password"))
+		return
+	}
+	dataSource.Password = encryptedPassword
+
+	if err := database.DB.Create(&dataSource).Error; err != nil {
+		c.Error(errors.WrapError(err, "Could not create data source"))
+		return
+	}
+
+	c.JSON(http.StatusCreated, dataSource)
+}
+
+func ListDataSources(c *gin.Context) {
+	var dataSources []models.DataSource
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+
+	query := database.DB.Model(&models.DataSource{})
+	if role.(string) != "admin" {
+		query = query.Where("user_id = ? OR is_public = ?", userID, true)
+	}
+
+	if err := query.Find(&dataSources).Error; err != nil {
+		c.Error(errors.WrapError(err, "Could not fetch data sources"))
+		return
+	}
+
+	// 清除密码字段
+	for i := range dataSources {
+		dataSources[i].Password = ""
+	}
+
+	c.JSON(http.StatusOK, dataSources)
+}
+
+func GetDataSource(c *gin.Context) {
+	id := c.Param("id")
+	var dataSource models.DataSource
+	if err := database.DB.First(&dataSource, id).Error; err != nil {
+		c.Error(errors.ErrNotFound)
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && dataSource.UserID != userID.(uint) && !dataSource.IsPublic {
+		c.Error(errors.ErrForbidden)
+		return
+	}
+
+	// 清除密码字段
+	dataSource.Password = ""
+
+	c.JSON(http.StatusOK, dataSource)
+}
+
+func UpdateDataSource(c *gin.Context) {
+	id := c.Param("id")
+	var dataSource models.DataSource
+	if err := database.DB.First(&dataSource, id).Error; err != nil {
+		c.Error(errors.ErrNotFound)
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	if dataSource.UserID != userID.(uint) {
+		c.Error(errors.ErrForbidden)
+		return
+	}
+
+	var updateData struct {
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		Host        string `json:"host"`
+		Port        int    `json:"port"`
+		Database    string `json:"database"`
+		Username    string `json:"username"`
+		Password    string `json:"password"`
+		Description string `json:"description"`
+		IsPublic    bool   `json:"isPublic"`
+	}
+
+	if err := c.ShouldBindJSON(&updateData); err != nil {
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if errors.IsValidationError(err) {
+			c.Error(errors.NewBadRequestError("Invalid data source data", err))
+		} else if errors.As(err, &syntaxErr) || errors.As(err, &typeErr) {
+			c.Error(errors.NewBadRequestError("Invalid JSON format", err))
+		} else {
+			c.Error(errors.WrapError(err, "Invalid data source data"))
+		}
+		return
+	}
+
+	// 更新字段
+	dataSource.Name = updateData.Name
+	dataSource.Type = updateData.Type
+	dataSource.Host = updateData.Host
+	dataSource.Port = updateData.Port
+	dataSource.Database = updateData.Database
+	dataSource.Username = updateData.Username
+	dataSource.Description = updateData.Description
+	dataSource.IsPublic = updateData.IsPublic
+
+	// 如果提供了新密码，则更新密码
+	if updateData.Password != "" {
+		encryptedPassword, err := encryptPassword(updateData.Password)
+		if err != nil {
+			c.Error(errors.WrapError(err, "Could not encrypt password"))
+			return
+		}
+		dataSource.Password = encryptedPassword
+	}
+
+	if err := database.DB.Save(&dataSource).Error; err != nil {
+		c.Error(errors.WrapError(err, "Could not update data source"))
+		return
+	}
+
+	// 清除密码字段
+	dataSource.Password = ""
+
+	c.JSON(http.StatusOK, dataSource)
+}
+
+func DeleteDataSource(c *gin.Context) {
+	id := c.Param("id")
+	var dataSource models.DataSource
+	if err := database.DB.First(&dataSource, id).Error; err != nil {
+		c.Error(errors.ErrNotFound)
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	if dataSource.UserID != userID.(uint) {
+		c.Error(errors.ErrForbidden)
+		return
+	}
+
+	// 检查是否有查询使用此数据源
+	var count int64
+	if err := database.DB.Model(&models.Query{}).Where("data_source_id = ?", id).Count(&count).Error; err != nil {
+		c.Error(errors.WrapError(err, "Could not check data source usage"))
+		return
+	}
+
+	if count > 0 {
+		c.Error(errors.NewBadRequestError("Cannot delete data source that is being used by queries", nil))
+		return
+	}
+
+	if err := database.DB.Delete(&dataSource).Error; err != nil {
+		c.Error(errors.WrapError(err, "Could not delete data source"))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Data source deleted successfully"})
+}
+
+// 辅助函数：加密密码
+func encryptPassword(password string) (string, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashedPassword), nil
+}

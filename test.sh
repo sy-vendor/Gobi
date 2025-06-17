@@ -21,13 +21,34 @@ TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
 
 echo "获取到的 Token: $TOKEN"
 
-# 3. 创建 SQL 查询
-echo -e "\n${GREEN}3. 测试创建 SQL 查询${NC}"
+# 3. 创建数据源
+echo -e "\n${GREEN}3. 测试创建数据源${NC}"
+DATASOURCE_RESPONSE=$(curl -s -X POST http://localhost:8080/api/datasources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "测试数据源",
+    "type": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "database": "test_db",
+    "username": "test_user",
+    "password": "test_pass",
+    "description": "测试数据源描述",
+    "isPublic": true
+  }')
+
+echo "数据源响应: $DATASOURCE_RESPONSE"
+DATASOURCE_ID=$(echo $DATASOURCE_RESPONSE | jq -r '.ID')
+
+# 4. 创建 SQL 查询
+echo -e "\n${GREEN}4. 测试创建 SQL 查询${NC}"
 QUERY_RESPONSE=$(curl -s -X POST http://localhost:8080/api/queries \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "测试查询",
+    "dataSourceId": '$DATASOURCE_ID',
     "sql": "SELECT * FROM users",
     "description": "测试查询描述",
     "isPublic": true
@@ -36,8 +57,8 @@ QUERY_RESPONSE=$(curl -s -X POST http://localhost:8080/api/queries \
 echo "查询响应: $QUERY_RESPONSE"
 QUERY_ID=$(echo $QUERY_RESPONSE | jq -r '.ID')
 
-# 4. 创建图表
-echo -e "\n${GREEN}4. 测试创建图表${NC}"
+# 5. 创建图表
+echo -e "\n${GREEN}5. 测试创建图表${NC}"
 CHART_RESPONSE=$(curl -s -X POST http://localhost:8080/api/charts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
@@ -52,8 +73,8 @@ CHART_RESPONSE=$(curl -s -X POST http://localhost:8080/api/charts \
 echo "图表响应: $CHART_RESPONSE"
 CHART_ID=$(echo $CHART_RESPONSE | jq -r '.ID')
 
-# 5. 上传 Excel 模板
-echo -e "\n${GREEN}5. 测试上传 Excel 模板${NC}"
+# 6. 上传 Excel 模板
+echo -e "\n${GREEN}6. 测试上传 Excel 模板${NC}"
 # 创建一个简单的 Excel 文件
 echo "创建测试 Excel 文件..."
 cat > test_template.xlsx << EOL
@@ -67,8 +88,8 @@ TEMPLATE_RESPONSE=$(curl -s -X POST http://localhost:8080/api/templates \
 echo "模板响应: $TEMPLATE_RESPONSE"
 TEMPLATE_ID=$(echo $TEMPLATE_RESPONSE | jq -r '.ID')
 
-# 6. 测试数据隔离
-echo -e "\n${GREEN}6. 测试数据隔离${NC}"
+# 7. 测试数据隔离
+echo -e "\n${GREEN}7. 测试数据隔离${NC}"
 # 创建另一个用户
 curl -s -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
@@ -84,8 +105,8 @@ echo "尝试访问其他用户的查询..."
 curl -s -X GET http://localhost:8080/api/queries/$QUERY_ID \
   -H "Authorization: Bearer $TOKEN2"
 
-# 7. 测试图表类型
-echo -e "\n${GREEN}7. 测试不同图表类型${NC}"
+# 8. 测试图表类型
+echo -e "\n${GREEN}8. 测试不同图表类型${NC}"
 # 创建柱状图
 curl -s -X POST http://localhost:8080/api/charts \
   -H "Content-Type: application/json" \
