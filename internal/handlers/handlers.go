@@ -226,7 +226,8 @@ func UpdateQuery(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if query.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && query.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
@@ -284,7 +285,8 @@ func DeleteQuery(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if query.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && query.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
@@ -329,8 +331,14 @@ func CreateChart(c *gin.Context) {
 func ListCharts(c *gin.Context) {
 	var charts []models.Chart
 	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
 
-	if err := database.DB.Where("user_id = ?", userID).Find(&charts).Error; err != nil {
+	query := database.DB.Model(&models.Chart{})
+	if role.(string) != "admin" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	if err := query.Find(&charts).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch charts"})
 		return
 	}
@@ -347,7 +355,8 @@ func GetChart(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if chart.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && chart.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
@@ -364,7 +373,8 @@ func UpdateChart(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if chart.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && chart.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
@@ -399,7 +409,8 @@ func DeleteChart(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if chart.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && chart.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
@@ -639,7 +650,8 @@ func UpdateDataSource(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if dataSource.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && dataSource.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
@@ -711,7 +723,8 @@ func DeleteDataSource(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if dataSource.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && dataSource.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
