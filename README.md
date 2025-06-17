@@ -40,6 +40,17 @@ go run cmd/server/main.go
 
 The server will start on port 8080 by default. | 服务器默认在 8080 端口启动。
 
+## Quick Start | 快速开始
+
+```bash
+git clone https://github.com/yourusername/gobi.git
+cd gobi
+go mod download
+go run cmd/server/main.go
+```
+
+访问 [http://localhost:8080](http://localhost:8080) 查看服务是否启动成功。
+
 ## API Endpoints | API 接口
 
 ### Authentication | 认证
@@ -66,6 +77,50 @@ The server will start on port 8080 by default. | 服务器默认在 8080 端口�
 - GET /api/templates/:id - Get a specific template | 获取特定模板
 - PUT /api/templates/:id - Update a template | 更新模板
 - DELETE /api/templates/:id - Delete a template | 删除模板
+
+## Example API Usage | API 使用示例
+
+### Register | 注册
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"test123"}'
+```
+
+### Login | 登录
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"test123"}'
+```
+
+### Create Query | 创建查询
+```bash
+curl -X POST http://localhost:8080/api/queries \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_token>" \
+  -d '{"name":"Test Query","sql":"SELECT * FROM users"}'
+```
+
+## Error Handling | 错误处理
+
+所有 API 错误响应均为 JSON 格式，例如：
+
+```json
+{
+  "code": 400,
+  "message": "Invalid registration request",
+  "error": "Invalid registration request: Key: 'Password' Error:Field validation for 'Password' failed on the 'required' tag"
+}
+```
+
+常见错误码：
+- 400 Bad Request：参数错误或无效 JSON
+- 401 Unauthorized：未认证或 token 无效
+- 403 Forbidden：无权限
+- 404 Not Found：资源不存在
+- 409 Conflict：资源冲突（如用户名已存在）
+- 500 Internal Server Error：服务器内部错误
 
 ## Security | 安全特性
 
@@ -99,6 +154,15 @@ gobi/
 │   └── templates/         # HTML templates | HTML 模板
 ├── go.mod                 # Go module file | Go 模块文件
 └── README.md             # Project documentation | 项目文档
+```
+
+## Testing | 测试
+
+可使用 `scripts/test_error_handling.sh` 脚本自动化测试主要接口和错误处理：
+
+```bash
+chmod +x scripts/test_error_handling.sh
+./scripts/test_error_handling.sh
 ```
 
 ## Future Improvements | 未来改进
