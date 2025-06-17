@@ -566,8 +566,15 @@ func CreateDataSource(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	dataSource.UserID = userID.(uint)
 
-	// 直接存明文密码，不加密
-	// dataSource.Password = dataSource.Password
+	// 加密密码
+	if dataSource.Password != "" {
+		encrypted, err := utils.EncryptAES(dataSource.Password)
+		if err != nil {
+			c.Error(errors.WrapError(err, "Could not encrypt password"))
+			return
+		}
+		dataSource.Password = encrypted
+	}
 
 	if err := database.DB.Create(&dataSource).Error; err != nil {
 		c.Error(errors.WrapError(err, "Could not create data source"))
@@ -672,9 +679,14 @@ func UpdateDataSource(c *gin.Context) {
 	dataSource.Description = updateData.Description
 	dataSource.IsPublic = updateData.IsPublic
 
-	// 如果提供了新密码，则直接存明文
+	// 如果提供了新密码，则加密
 	if updateData.Password != "" {
-		dataSource.Password = updateData.Password
+		encrypted, err := utils.EncryptAES(updateData.Password)
+		if err != nil {
+			c.Error(errors.WrapError(err, "Could not encrypt password"))
+			return
+		}
+		dataSource.Password = encrypted
 	}
 
 	if err := database.DB.Save(&dataSource).Error; err != nil {
@@ -961,6 +973,18 @@ func ExecuteQuery(c *gin.Context) {
 		return
 	}
 	// 连接数据源并执行 SQL
+	// 解密密码
+	if query.DataSource.Password != "" {
+		pwd, err := utils.DecryptAES(query.DataSource.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not decrypt data source password"})
+			return
+		}
+		query.DataSource.Password = pwd
+	}
+	fmt.Printf("DataSource Type: %s, Host: %s\n", query.DataSource.Type, query.DataSource.Host)
+	fmt.Printf("SQL: %s\n", query.SQL)
+	fmt.Printf("DataSource struct: %+v\n", query.DataSource)
 	result, err := utils.ExecuteSQL(query.DataSource, query.SQL)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())

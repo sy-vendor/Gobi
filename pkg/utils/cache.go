@@ -7,6 +7,13 @@ import (
 	"fmt"
 	"gobi/internal/models"
 
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"io"
+	"os"
+
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -87,4 +94,55 @@ func ExecuteSQL(ds models.DataSource, sqlStr string) ([]map[string]interface{}, 
 		results = append(results, rowMap)
 	}
 	return results, nil
+}
+
+// EncryptAES 加密明文，返回 base64 字符串
+func EncryptAES(plaintext string) (string, error) {
+	key := []byte(os.Getenv("DATA_SOURCE_SECRET"))
+	if len(key) != 32 {
+		return "", fmt.Errorf("DATA_SOURCE_SECRET must be 32 bytes (256 bit)")
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+// DecryptAES 解密 base64 字符串，返回明文
+func DecryptAES(ciphertext string) (string, error) {
+	key := []byte(os.Getenv("DATA_SOURCE_SECRET"))
+	if len(key) != 32 {
+		return "", fmt.Errorf("DATA_SOURCE_SECRET must be 32 bytes (256 bit)")
+	}
+	data, err := base64.StdEncoding.DecodeString(ciphertext)
+	if err != nil {
+		return "", err
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+	if len(data) < gcm.NonceSize() {
+		return "", fmt.Errorf("ciphertext too short")
+	}
+	nonce, ciphertextBytes := data[:gcm.NonceSize()], data[gcm.NonceSize():]
+	plaintext, err := gcm.Open(nil, nonce, ciphertextBytes, nil)
+	if err != nil {
+		return "", err
+	}
+	return string(plaintext), nil
 }
