@@ -127,8 +127,14 @@ func Register(c *gin.Context) {
 
 // Query handlers
 func CreateQuery(c *gin.Context) {
-	var query models.Query
-	if err := c.ShouldBindJSON(&query); err != nil {
+	var req struct {
+		Name         string `json:"name"`
+		SQL          string `json:"sql"`
+		Description  string `json:"description"`
+		IsPublic     bool   `json:"is_public"`
+		DataSourceID uint   `json:"data_source_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		var syntaxErr *json.SyntaxError
 		var typeErr *json.UnmarshalTypeError
 		if errors.IsValidationError(err) {
@@ -142,7 +148,14 @@ func CreateQuery(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	query.UserID = userID.(uint)
+	query := models.Query{
+		Name:         req.Name,
+		SQL:          req.SQL,
+		Description:  req.Description,
+		IsPublic:     req.IsPublic,
+		DataSourceID: req.DataSourceID,
+		UserID:       userID.(uint),
+	}
 
 	if err := database.DB.Create(&query).Error; err != nil {
 		c.Error(errors.WrapError(err, "Could not create query"))
@@ -218,7 +231,14 @@ func UpdateQuery(c *gin.Context) {
 		return
 	}
 
-	if err := c.ShouldBindJSON(&query); err != nil {
+	var req struct {
+		Name         string `json:"name"`
+		SQL          string `json:"sql"`
+		Description  string `json:"description"`
+		IsPublic     bool   `json:"is_public"`
+		DataSourceID uint   `json:"data_source_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		var syntaxErr *json.SyntaxError
 		var typeErr *json.UnmarshalTypeError
 		if errors.IsValidationError(err) {
@@ -229,6 +249,20 @@ func UpdateQuery(c *gin.Context) {
 			c.Error(errors.WrapError(err, "Invalid query data"))
 		}
 		return
+	}
+
+	if req.Name != "" {
+		query.Name = req.Name
+	}
+	if req.SQL != "" {
+		query.SQL = req.SQL
+	}
+	if req.Description != "" {
+		query.Description = req.Description
+	}
+	query.IsPublic = req.IsPublic
+	if req.DataSourceID != 0 {
+		query.DataSourceID = req.DataSourceID
 	}
 
 	if err := database.DB.Save(&query).Error; err != nil {
@@ -532,13 +566,8 @@ func CreateDataSource(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	dataSource.UserID = userID.(uint)
 
-	// 加密密码
-	encryptedPassword, err := encryptPassword(dataSource.Password)
-	if err != nil {
-		c.Error(errors.WrapError(err, "Could not encrypt password"))
-		return
-	}
-	dataSource.Password = encryptedPassword
+	// 直接存明文密码，不加密
+	// dataSource.Password = dataSource.Password
 
 	if err := database.DB.Create(&dataSource).Error; err != nil {
 		c.Error(errors.WrapError(err, "Could not create data source"))
@@ -643,14 +672,9 @@ func UpdateDataSource(c *gin.Context) {
 	dataSource.Description = updateData.Description
 	dataSource.IsPublic = updateData.IsPublic
 
-	// 如果提供了新密码，则更新密码
+	// 如果提供了新密码，则直接存明文
 	if updateData.Password != "" {
-		encryptedPassword, err := encryptPassword(updateData.Password)
-		if err != nil {
-			c.Error(errors.WrapError(err, "Could not encrypt password"))
-			return
-		}
-		dataSource.Password = encryptedPassword
+		dataSource.Password = updateData.Password
 	}
 
 	if err := database.DB.Save(&dataSource).Error; err != nil {
@@ -919,4 +943,29 @@ func ResetUserPassword(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
+}
+
+// Execute query handler
+func ExecuteQuery(c *gin.Context) {
+	id := c.Param("id")
+	var query models.Query
+	if err := database.DB.Preload("DataSource").First(&query, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Query not found"})
+		return
+	}
+	// 权限校验：仅本人或公开或管理员可执行
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && query.UserID != userID.(uint) && !query.IsPublic {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+		return
+	}
+	// 连接数据源并执行 SQL
+	result, err := utils.ExecuteSQL(query.DataSource, query.SQL)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": result})
 }

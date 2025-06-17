@@ -45,6 +45,7 @@ func main() {
 		authorized.GET("/queries/:id", handlers.GetQuery)
 		authorized.PUT("/queries/:id", handlers.UpdateQuery)
 		authorized.DELETE("/queries/:id", handlers.DeleteQuery)
+		authorized.POST("/queries/:id/execute", handlers.ExecuteQuery)
 
 		// Data source routes
 		authorized.POST("/datasources", handlers.CreateDataSource)
