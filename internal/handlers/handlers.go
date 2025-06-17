@@ -836,11 +836,30 @@ func DashboardStats(c *gin.Context) {
 	database.DB.Model(&models.User{}).Count(&totalUsers)
 	database.DB.Model(&models.Query{}).Where("DATE(created_at) = ?", today).Count(&todayQueries)
 
+	// 查询趋势（最近7天每天的查询数）
+	queryTrends := []map[string]interface{}{}
+	for i := 6; i >= 0; i-- {
+		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		var count int64
+		database.DB.Model(&models.Query{}).Where("DATE(created_at) = ?", date).Count(&count)
+		queryTrends = append(queryTrends, map[string]interface{}{"date": date, "count": count})
+	}
+
+	// 热门查询（执行次数最多的前5个查询）
+	type HotQuery struct {
+		Name  string
+		Count int64
+	}
+	hotQueries := []HotQuery{}
+	database.DB.Table("queries").Select("name, exec_count as count").Order("exec_count desc").Limit(5).Scan(&hotQueries)
+
 	c.JSON(http.StatusOK, gin.H{
 		"totalQueries": totalQueries,
 		"totalCharts":  totalCharts,
 		"totalUsers":   totalUsers,
 		"todayQueries": todayQueries,
+		"queryTrends":  queryTrends,
+		"hotQueries":   hotQueries,
 	})
 }
 
@@ -1004,5 +1023,8 @@ func ExecuteQuery(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// 执行次数+1
+	query.ExecCount++
+	database.DB.Save(&query)
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }

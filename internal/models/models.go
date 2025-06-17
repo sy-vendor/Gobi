@@ -40,6 +40,7 @@ type Query struct {
 	SQL          string
 	Description  string
 	IsPublic     bool
+	ExecCount    int64 // 新增：执行次数
 }
 
 type Chart struct {
