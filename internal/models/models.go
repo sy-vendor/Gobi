@@ -45,14 +45,15 @@ type Query struct {
 
 type Chart struct {
 	gorm.Model
-	QueryID uint
-	Query   Query
-	UserID  uint
-	User    User
-	Name    string
-	Type    string // bar, line, pie, scatter, radar, heatmap, gauge, funnel
-	Config  string // JSON configuration
-	Data    string // JSON data
+	QueryID     uint
+	Query       Query
+	UserID      uint
+	User        User
+	Name        string
+	Type        string // bar, line, pie, scatter, radar, heatmap, gauge, funnel
+	Config      string // JSON configuration
+	Data        string // JSON data
+	Description string `json:"description"`
 }
 
 type ExcelTemplate struct {
@@ -61,5 +62,5 @@ type ExcelTemplate struct {
 	User        User
 	Name        string
 	Template    []byte
-	Description string
+	Description string `json:"description"`
 }

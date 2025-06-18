@@ -303,8 +303,15 @@ func DeleteQuery(c *gin.Context) {
 
 // Chart handlers
 func CreateChart(c *gin.Context) {
-	var chart models.Chart
-	if err := c.ShouldBindJSON(&chart); err != nil {
+	var req struct {
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		QueryID     uint   `json:"query_id"`
+		Config      string `json:"config"`
+		Data        string `json:"data"`
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		var syntaxErr *json.SyntaxError
 		var typeErr *json.UnmarshalTypeError
 		if errors.IsValidationError(err) {
@@ -318,7 +325,15 @@ func CreateChart(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	chart.UserID = userID.(uint)
+	chart := models.Chart{
+		Name:        req.Name,
+		Type:        req.Type,
+		QueryID:     req.QueryID,
+		Config:      req.Config,
+		Data:        req.Data,
+		Description: req.Description,
+		UserID:      userID.(uint),
+	}
 
 	if err := database.DB.Create(&chart).Error; err != nil {
 		c.Error(errors.WrapError(err, "Could not create chart"))
@@ -333,7 +348,7 @@ func ListCharts(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	role, _ := c.Get("role")
 
-	query := database.DB.Model(&models.Chart{})
+	query := database.DB.Preload("Query").Preload("User").Model(&models.Chart{})
 	if role.(string) != "admin" {
 		query = query.Where("user_id = ?", userID)
 	}
@@ -349,7 +364,7 @@ func ListCharts(c *gin.Context) {
 func GetChart(c *gin.Context) {
 	id := c.Param("id")
 	var chart models.Chart
-	if err := database.DB.First(&chart, id).Error; err != nil {
+	if err := database.DB.Preload("Query").Preload("User").First(&chart, id).Error; err != nil {
 		c.Error(errors.ErrNotFound)
 		return
 	}
@@ -467,13 +482,30 @@ func CreateTemplate(c *gin.Context) {
 func ListTemplates(c *gin.Context) {
 	var templates []models.ExcelTemplate
 	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
 
-	if err := database.DB.Where("user_id = ?", userID).Find(&templates).Error; err != nil {
+	query := database.DB.Model(&models.ExcelTemplate{})
+	if role.(string) != "admin" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	if err := query.Find(&templates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch templates"})
 		return
 	}
 
-	c.JSON(http.StatusOK, templates)
+	// 返回时包含 description 字段
+	result := make([]map[string]interface{}, 0, len(templates))
+	for _, t := range templates {
+		result = append(result, map[string]interface{}{
+			"id":          t.ID,
+			"name":        t.Name,
+			"user_id":     t.UserID,
+			"created_at":  t.CreatedAt,
+			"description": t.Description,
+		})
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func GetTemplate(c *gin.Context) {
@@ -485,12 +517,19 @@ func GetTemplate(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if template.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+	if role.(string) != "admin" && template.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
 
-	c.JSON(http.StatusOK, template)
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"id":          template.ID,
+		"name":        template.Name,
+		"user_id":     template.UserID,
+		"created_at":  template.CreatedAt,
+		"description": template.Description,
+	})
 }
 
 func UpdateTemplate(c *gin.Context) {
