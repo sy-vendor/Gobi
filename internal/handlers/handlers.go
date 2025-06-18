@@ -1056,9 +1056,6 @@ func ExecuteQuery(c *gin.Context) {
 		}
 		query.DataSource.Password = pwd
 	}
-	fmt.Printf("DataSource Type: %s, Host: %s\n", query.DataSource.Type, query.DataSource.Host)
-	fmt.Printf("SQL: %s\n", query.SQL)
-	fmt.Printf("DataSource struct: %+v\n", query.DataSource)
 	result, err := utils.ExecuteSQL(query.DataSource, query.SQL)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
