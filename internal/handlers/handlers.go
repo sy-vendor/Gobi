@@ -434,7 +434,6 @@ func CreateTemplate(c *gin.Context) {
 		}
 		return
 	}
-
 	openedFile, err := file.Open()
 	if err != nil {
 		c.Error(errors.WrapError(err, "Could not open file"))
@@ -442,15 +441,19 @@ func CreateTemplate(c *gin.Context) {
 	}
 	defer openedFile.Close()
 
-	template := models.ExcelTemplate{
-		Name:     file.Filename,
-		UserID:   c.GetUint("userID"),
-		Template: make([]byte, file.Size),
-	}
+	desc := c.PostForm("description")
 
-	if _, err := openedFile.Read(template.Template); err != nil {
-		c.Error(errors.WrapError(err, "Could not read file"))
-		return
+	template := models.ExcelTemplate{
+		Name:        file.Filename,
+		UserID:      c.GetUint("userID"),
+		Template:    make([]byte, file.Size),
+		Description: desc,
+	}
+	if file.Size > 0 {
+		if _, err := openedFile.Read(template.Template); err != nil && err.Error() != "EOF" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read file: " + err.Error()})
+			return
+		}
 	}
 
 	if err := database.DB.Create(&template).Error; err != nil {
