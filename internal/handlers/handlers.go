@@ -28,6 +28,11 @@ func Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&login); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "login",
+			"username": login.Username,
+			"error":    err.Error(),
+		}).Warn("Login request validation failed")
 		if errors.IsValidationError(err) {
 			c.Error(errors.NewBadRequestError("Invalid login request", err))
 		} else {
@@ -38,11 +43,21 @@ func Login(c *gin.Context) {
 
 	var user models.User
 	if err := database.DB.Where("username = ?", login.Username).First(&user).Error; err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "login",
+			"username": login.Username,
+			"error":    "user not found",
+		}).Warn("Login failed: user not found")
 		c.Error(errors.ErrInvalidCredentials)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "login",
+			"username": login.Username,
+			"error":    "invalid password",
+		}).Warn("Login failed: invalid password")
 		c.Error(errors.ErrInvalidCredentials)
 		return
 	}
@@ -60,9 +75,21 @@ func Login(c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(cfg.JWT.Secret))
 	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "login",
+			"username": login.Username,
+			"error":    err.Error(),
+		}).Error("Login failed: token generation error")
 		c.Error(errors.WrapError(err, "Could not generate token"))
 		return
 	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "login",
+		"userID":   user.ID,
+		"role":     user.Role,
+		"username": user.Username,
+	}).Info("User login success")
 
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
@@ -76,6 +103,12 @@ func Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&register); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "register",
+			"username": register.Username,
+			"email":    register.Email,
+			"error":    err.Error(),
+		}).Warn("Register request validation failed")
 		var syntaxErr *json.SyntaxError
 		var typeErr *json.UnmarshalTypeError
 		if errors.IsValidationError(err) {
@@ -92,15 +125,33 @@ func Register(c *gin.Context) {
 	var existingUser models.User
 	err := database.DB.Where("username = ? OR email = ?", register.Username, register.Email).First(&existingUser).Error
 	if err == nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "register",
+			"username": register.Username,
+			"email":    register.Email,
+			"error":    "user or email exists",
+		}).Warn("Register failed: user or email exists")
 		c.Error(errors.NewConflictError("User or email already exists", nil))
 		return
 	} else if err != gorm.ErrRecordNotFound {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "register",
+			"username": register.Username,
+			"email":    register.Email,
+			"error":    err.Error(),
+		}).Error("Register failed: database error")
 		c.Error(errors.WrapError(err, "Database error"))
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(register.Password), bcrypt.DefaultCost)
 	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "register",
+			"username": register.Username,
+			"email":    register.Email,
+			"error":    err.Error(),
+		}).Error("Register failed: hash password error")
 		c.Error(errors.WrapError(err, "Could not hash password"))
 		return
 	}
@@ -118,9 +169,23 @@ func Register(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "register",
+			"username": register.Username,
+			"email":    register.Email,
+			"error":    err.Error(),
+		}).Error("Register failed: create user error")
 		c.Error(errors.WrapError(err, "Could not create user"))
 		return
 	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "register",
+		"userID":   user.ID,
+		"role":     user.Role,
+		"username": user.Username,
+		"email":    user.Email,
+	}).Info("User register success")
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
 }
@@ -135,6 +200,11 @@ func CreateQuery(c *gin.Context) {
 		DataSourceID uint   `json:"data_source_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_query",
+			"userID": c.GetUint("userID"),
+			"error":  err.Error(),
+		}).Warn("Create query validation failed")
 		var syntaxErr *json.SyntaxError
 		var typeErr *json.UnmarshalTypeError
 		if errors.IsValidationError(err) {
@@ -158,11 +228,23 @@ func CreateQuery(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&query).Error; err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_query",
+			"userID": userID,
+			"error":  err.Error(),
+		}).Error("Create query failed: db error")
 		c.Error(errors.WrapError(err, "Could not create query"))
 		return
 	}
 
 	utils.QueryCache.Flush()
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":  "create_query",
+		"userID":  userID,
+		"queryID": query.ID,
+		"name":    query.Name,
+	}).Info("Query created successfully")
 
 	c.JSON(http.StatusCreated, query)
 }
@@ -442,6 +524,11 @@ func DeleteChart(c *gin.Context) {
 func CreateTemplate(c *gin.Context) {
 	file, err := c.FormFile("template")
 	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_template",
+			"userID": c.GetUint("userID"),
+			"error":  err.Error(),
+		}).Warn("Create template: no file uploaded")
 		if errors.IsContentTypeError(err) {
 			c.Error(errors.NewBadRequestError("No file uploaded", err))
 		} else {
@@ -451,13 +538,16 @@ func CreateTemplate(c *gin.Context) {
 	}
 	openedFile, err := file.Open()
 	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_template",
+			"userID": c.GetUint("userID"),
+			"error":  err.Error(),
+		}).Error("Create template: open file failed")
 		c.Error(errors.WrapError(err, "Could not open file"))
 		return
 	}
 	defer openedFile.Close()
-
 	desc := c.PostForm("description")
-
 	template := models.ExcelTemplate{
 		Name:        file.Filename,
 		UserID:      c.GetUint("userID"),
@@ -466,16 +556,30 @@ func CreateTemplate(c *gin.Context) {
 	}
 	if file.Size > 0 {
 		if _, err := openedFile.Read(template.Template); err != nil && err.Error() != "EOF" {
+			utils.Logger.WithFields(map[string]interface{}{
+				"action": "create_template",
+				"userID": c.GetUint("userID"),
+				"error":  err.Error(),
+			}).Error("Create template: read file failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read file: " + err.Error()})
 			return
 		}
 	}
-
 	if err := database.DB.Create(&template).Error; err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_template",
+			"userID": c.GetUint("userID"),
+			"error":  err.Error(),
+		}).Error("Create template: db error")
 		c.Error(errors.WrapError(err, "Could not save template"))
 		return
 	}
-
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":     "create_template",
+		"userID":     c.GetUint("userID"),
+		"templateID": template.ID,
+		"name":       template.Name,
+	}).Info("Template created successfully")
 	c.JSON(http.StatusCreated, template)
 }
 
@@ -631,6 +735,11 @@ func DownloadTemplate(c *gin.Context) {
 func CreateDataSource(c *gin.Context) {
 	var dataSource models.DataSource
 	if err := c.ShouldBindJSON(&dataSource); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_datasource",
+			"userID": c.GetUint("userID"),
+			"error":  err.Error(),
+		}).Warn("Create datasource validation failed")
 		var syntaxErr *json.SyntaxError
 		var typeErr *json.UnmarshalTypeError
 		if errors.IsValidationError(err) {
@@ -642,27 +751,38 @@ func CreateDataSource(c *gin.Context) {
 		}
 		return
 	}
-
 	userID, _ := c.Get("userID")
 	dataSource.UserID = userID.(uint)
-
 	// 加密密码
 	if dataSource.Password != "" {
 		encrypted, err := utils.EncryptAES(dataSource.Password)
 		if err != nil {
+			utils.Logger.WithFields(map[string]interface{}{
+				"action": "create_datasource",
+				"userID": userID,
+				"error":  err.Error(),
+			}).Error("Create datasource: encrypt password error")
 			c.Error(errors.WrapError(err, "Could not encrypt password"))
 			return
 		}
 		dataSource.Password = encrypted
 	}
-
 	if err := database.DB.Create(&dataSource).Error; err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_datasource",
+			"userID": userID,
+			"error":  err.Error(),
+		}).Error("Create datasource: db error")
 		c.Error(errors.WrapError(err, "Could not create data source"))
 		return
 	}
-
 	utils.QueryCache.Flush()
-
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":       "create_datasource",
+		"userID":       userID,
+		"datasourceID": dataSource.ID,
+		"name":         dataSource.Name,
+	}).Info("Datasource created successfully")
 	c.JSON(http.StatusCreated, dataSource)
 }
 
