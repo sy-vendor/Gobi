@@ -8,8 +8,12 @@ import (
 	"gobi/pkg/utils"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	limiterlib "github.com/ulule/limiter/v3"
+	ginlimiter "github.com/ulule/limiter/v3/drivers/middleware/gin"
+	memory "github.com/ulule/limiter/v3/drivers/store/memory"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
@@ -31,6 +35,24 @@ func main() {
 
 	// Create Gin router
 	r := gin.New()
+
+	// CORS 中间件
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost",
+			"http://127.0.0.1",
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
+	// API 限流中间件（全局，10 req/s）
+	rate, _ := limiterlib.NewRateFromFormatted("10-S")
+	store := memory.NewStore()
+	instance := ginlimiter.NewMiddleware(limiterlib.New(store, rate))
+	r.Use(instance)
 
 	// Prometheus metrics
 	p := ginprometheus.NewPrometheus("gobi")
