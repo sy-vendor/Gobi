@@ -67,7 +67,8 @@ func Login(c *gin.Context) {
 	user.LastLogin = time.Now()
 	database.DB.Save(&user)
 
-	cfg := config.DefaultConfig
+	// cfg := config.DefaultConfig
+	cfg := config.AppConfig
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"role":    user.Role,
@@ -107,7 +108,7 @@ func getRoleFromToken(c *gin.Context) string {
 	}
 	tokenStr := parts[1]
 	token, _ := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		return []byte(config.DefaultConfig.JWT.Secret), nil
+		return []byte(config.AppConfig.JWT.Secret), nil
 	})
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		if role, ok := claims["role"].(string); ok {

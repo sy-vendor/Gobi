@@ -16,7 +16,9 @@ func main() {
 	// 自动加载 .env 文件
 	_ = godotenv.Load()
 
-	cfg := config.DefaultConfig
+	// 加载 config.yaml 配置
+	config.LoadConfig()
+	cfg := config.AppConfig
 
 	// Initialize database
 	if err := database.InitDB(&cfg); err != nil {
