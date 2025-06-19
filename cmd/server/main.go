@@ -9,9 +9,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// 自动加载 .env 文件
+	_ = godotenv.Load()
+
 	cfg := config.DefaultConfig
 
 	// Initialize database

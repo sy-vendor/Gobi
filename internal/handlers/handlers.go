@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -94,6 +95,28 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
+// 从 Authorization 头解析 JWT 并获取 role
+func getRoleFromToken(c *gin.Context) string {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return ""
+	}
+	tokenStr := parts[1]
+	token, _ := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.DefaultConfig.JWT.Secret), nil
+	})
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		if role, ok := claims["role"].(string); ok {
+			return role
+		}
+	}
+	return ""
+}
+
 func Register(c *gin.Context) {
 	var register struct {
 		Username string `json:"username" binding:"required"`
@@ -125,7 +148,7 @@ func Register(c *gin.Context) {
 	var adminCount int64
 	database.DB.Model(&models.User{}).Where("role = ?", "admin").Count(&adminCount)
 	if adminCount > 0 {
-		role, _ := c.Get("role")
+		role := getRoleFromToken(c)
 		if role != "admin" {
 			utils.Logger.WithFields(map[string]interface{}{
 				"action":   "register",
@@ -1072,10 +1095,21 @@ func DashboardStats(c *gin.Context) {
 // List users handler
 func ListUsers(c *gin.Context) {
 	role, _ := c.Get("role")
-	if role.(string) != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
-		return
+	userID, _ := c.Get("userID")
+	var dbUsers []models.User
+
+	if role.(string) == "admin" {
+		if err := database.DB.Find(&dbUsers).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch users"})
+			return
+		}
+	} else {
+		if err := database.DB.Where("id = ?", userID).Find(&dbUsers).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch user"})
+			return
+		}
 	}
+
 	var users []struct {
 		ID        uint      `json:"id"`
 		Username  string    `json:"username"`
@@ -1083,11 +1117,6 @@ func ListUsers(c *gin.Context) {
 		Role      string    `json:"role"`
 		CreatedAt time.Time `json:"created_at"`
 		LastLogin time.Time `json:"last_login"`
-	}
-	dbUsers := []models.User{}
-	if err := database.DB.Find(&dbUsers).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch users"})
-		return
 	}
 	for _, u := range dbUsers {
 		users = append(users, struct {
