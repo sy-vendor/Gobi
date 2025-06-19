@@ -779,3 +779,37 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support | 支持
 
 For issues and questions, please create an issue on GitHub or contact the development team.
+
+## Docker & 容器化部署
+
+### 1. 构建镜像
+```bash
+docker build -t gobi .
+```
+
+### 2. 运行容器
+```bash
+docker run -p 8080:8080 \
+  -e DATA_SOURCE_SECRET=12345678901234567890123456789012 \
+  -e GOBI_ENV=dev \
+  gobi
+```
+
+### 3. 使用 docker-compose 一键启动（推荐开发/测试）
+```bash
+docker-compose up --build
+```
+- 默认会启动 gobi 服务和 MySQL 数据库
+- 可在 `docker-compose.yml` 中自定义数据库密码、端口等
+
+### 4. 挂载配置和迁移目录
+- Dockerfile 会自动拷贝 `config/`、`migrations/`、`.env`、`config.yaml` 到容器内
+- 如需自定义配置，建议挂载本地目录或修改镜像后重建
+
+### 5. 环境变量说明
+- `DATA_SOURCE_SECRET`：数据源加密密钥，必须32字节
+- `GOBI_ENV`：配置环境（dev/prod等）
+
+### 6. 访问服务
+- 默认端口：`http://localhost:8080`
+- 可通过 `docker-compose.yml` 或 `-p` 参数自定义端口映射
