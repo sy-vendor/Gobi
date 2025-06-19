@@ -8,8 +8,8 @@ import (
 
 type User struct {
 	gorm.Model
-	Username  string `gorm:"uniqueIndex"`
-	Email     string `gorm:"uniqueIndex"`
+	Username  string `gorm:"type:varchar(64);uniqueIndex"`
+	Email     string `gorm:"type:varchar(128);uniqueIndex"`
 	Password  string
 	Role      string    // admin or user
 	LastLogin time.Time `json:"last_login"`
