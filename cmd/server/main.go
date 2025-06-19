@@ -80,6 +80,8 @@ func main() {
 		authorized.PUT("/users/:id", handlers.UpdateUser)
 		// User reset password
 		authorized.POST("/users/:id/reset-password", handlers.ResetUserPassword)
+		// User delete
+		authorized.DELETE("/users/:id", handlers.DeleteUser)
 	}
 
 	// Start server

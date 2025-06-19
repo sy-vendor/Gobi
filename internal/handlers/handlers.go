@@ -121,6 +121,23 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	// 检查是否已有 admin 用户
+	var adminCount int64
+	database.DB.Model(&models.User{}).Where("role = ?", "admin").Count(&adminCount)
+	if adminCount > 0 {
+		role, _ := c.Get("role")
+		if role != "admin" {
+			utils.Logger.WithFields(map[string]interface{}{
+				"action":   "register",
+				"username": register.Username,
+				"email":    register.Email,
+				"error":    "only admin can register new users",
+			}).Warn("Register forbidden: only admin can register new users")
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only admin can register new users"})
+			return
+		}
+	}
+
 	// 检查用户名或邮箱是否已存在
 	var existingUser models.User
 	err := database.DB.Where("username = ? OR email = ?", register.Username, register.Email).First(&existingUser).Error
@@ -156,16 +173,16 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	role := "user"
+	roleStr := "user"
 	if register.IsAdmin {
-		role = "admin"
+		roleStr = "admin"
 	}
 
 	user := models.User{
 		Username: register.Username,
 		Email:    register.Email,
 		Password: string(hashedPassword),
-		Role:     role,
+		Role:     roleStr,
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -1098,6 +1115,12 @@ func UpdateUser(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	role, _ := c.Get("role")
 	if role.(string) != "admin" && toString(userID) != id {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "update_user",
+			"userID":   userID,
+			"targetID": id,
+			"role":     role,
+			"error":    "forbidden (only admin or self)"}).Warn("Update user: forbidden (only admin or self)")
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 		return
 	}
@@ -1150,6 +1173,12 @@ func ResetUserPassword(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	role, _ := c.Get("role")
 	if role.(string) != "admin" && toString(userID) != id {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "reset_password",
+			"userID":   userID,
+			"targetID": id,
+			"role":     role,
+			"error":    "forbidden (only admin or self)"}).Warn("Reset password: forbidden (only admin or self)")
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 		return
 	}
@@ -1213,4 +1242,53 @@ func ExecuteQuery(c *gin.Context) {
 	query.ExecCount++
 	database.DB.Save(&query)
 	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+func DeleteUser(c *gin.Context) {
+	id := c.Param("id")
+	var user models.User
+	if err := database.DB.First(&user, id).Error; err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "delete_user",
+			"targetID": id,
+			"error":    "user not found",
+		}).Warn("Delete user: not found")
+		c.Error(errors.ErrNotFound)
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	if role.(string) != "admin" {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "delete_user",
+			"userID":   userID,
+			"targetID": user.ID,
+			"role":     role,
+			"error":    "forbidden (only admin can delete)",
+		}).Warn("Delete user: forbidden (only admin)")
+		c.Error(errors.ErrForbidden)
+		return
+	}
+
+	if err := database.DB.Delete(&user).Error; err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "delete_user",
+			"userID":   userID,
+			"targetID": user.ID,
+			"role":     role,
+			"error":    err.Error(),
+		}).Error("Delete user: db error")
+		c.Error(errors.WrapError(err, "Could not delete user"))
+		return
+	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "delete_user",
+		"userID":   userID,
+		"targetID": user.ID,
+		"role":     role,
+	}).Info("User deleted")
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
