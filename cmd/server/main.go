@@ -6,7 +6,6 @@ import (
 	"gobi/internal/middleware"
 	"gobi/pkg/database"
 	"gobi/pkg/utils"
-	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +16,7 @@ func main() {
 
 	// Initialize database
 	if err := database.InitDB(&cfg); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		utils.Logger.Fatalf("Failed to initialize database: %v", err)
 	}
 
 	// Initialize query cache (default 5 min, cleanup 10 min)
@@ -85,6 +84,6 @@ func main() {
 
 	// Start server
 	if err := r.Run(":" + cfg.Server.Port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		utils.Logger.Fatalf("Failed to start server: %v", err)
 	}
 }
