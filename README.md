@@ -70,12 +70,6 @@ go mod download
 go run cmd/server/main.go
 ```
 
-访问 [http://localhost:8080](http://localhost:8080) 查看服务是否启动成功。
-
-### Default Admin Account | 默认管理员账户
-- Username: admin
-- Password: adminpass
-
 ## API Endpoints | API 接口
 
 ### Authentication | 认证
@@ -771,10 +765,6 @@ The application automatically handles database schema changes. For production de
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
-
-## License | 许可证
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Support | 支持
 
