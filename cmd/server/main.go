@@ -39,13 +39,14 @@ func main() {
 	// CORS 中间件
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost",
-			"http://127.0.0.1",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
 		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type", "Accept", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// API 限流中间件（全局，10 req/s）
@@ -125,7 +126,22 @@ func main() {
 		authorized.POST("/users/:id/reset-password", handlers.ResetUserPassword)
 		// User delete
 		authorized.DELETE("/users/:id", handlers.DeleteUser)
+
+		// Report schedule routes
+		authorized.POST("/reports/schedules", handlers.CreateReportSchedule)
+		authorized.GET("/reports/schedules", handlers.ListReportSchedules)
+		authorized.GET("/reports/schedules/:id", handlers.GetReportSchedule)
+		authorized.PUT("/reports/schedules/:id", handlers.UpdateReportSchedule)
+		authorized.DELETE("/reports/schedules/:id", handlers.DeleteReportSchedule)
+
+		// Report routes
+		authorized.GET("/reports", handlers.ListReports)
+		authorized.GET("/reports/:id/download", handlers.DownloadReport)
 	}
+
+	// Initialize report generator
+	utils.InitReportGenerator()
+	defer utils.StopReportGenerator()
 
 	// Start server
 	if err := r.Run(":" + cfg.Server.Port); err != nil {

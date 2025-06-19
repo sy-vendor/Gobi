@@ -64,3 +64,30 @@ type ExcelTemplate struct {
 	Template    []byte
 	Description string `json:"description"`
 }
+
+type Report struct {
+	gorm.Model
+	UserID      uint
+	User        User
+	Name        string
+	Type        string    // daily, weekly, monthly
+	Content     []byte    // report content in PDF or Excel format
+	GeneratedAt time.Time // when the report was generated
+	Status      string    // pending, success, failed
+	Error       string    // error message if generation failed
+}
+
+type ReportSchedule struct {
+	gorm.Model
+	UserID      uint
+	User        User
+	Name        string
+	Type        string    // daily, weekly, monthly
+	Queries     string    // JSON array of query IDs to include
+	Charts      string    // JSON array of chart IDs to include
+	Templates   string    // JSON array of template IDs to use
+	LastRun     time.Time // last time the report was generated
+	NextRun     time.Time // next scheduled run time
+	Active      bool      // whether the schedule is active
+	CronPattern string    // cron pattern for scheduling
+}

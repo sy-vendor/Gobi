@@ -732,7 +732,10 @@ func DeleteTemplate(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	if template.UserID != userID.(uint) {
+	role, _ := c.Get("role")
+
+	// 权限检查：管理员可以删除所有模板，普通用户只能删除自己的模板
+	if role.(string) != "admin" && template.UserID != userID.(uint) {
 		c.Error(errors.ErrForbidden)
 		return
 	}
