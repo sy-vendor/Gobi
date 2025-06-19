@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS excel_templates;
+DROP TABLE IF EXISTS charts;
+DROP TABLE IF EXISTS queries;
+DROP TABLE IF EXISTS datasources;
+DROP TABLE IF EXISTS users; 
