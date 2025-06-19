@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
 func main() {
@@ -30,6 +31,20 @@ func main() {
 
 	// Create Gin router
 	r := gin.New()
+
+	// Prometheus metrics
+	p := ginprometheus.NewPrometheus("gobi")
+	p.Use(r)
+
+	// 健康检查接口
+	r.GET("/healthz", func(c *gin.Context) {
+		sqlDB, err := database.DB.DB()
+		if err != nil || sqlDB.Ping() != nil {
+			c.JSON(500, gin.H{"status": "db error"})
+			return
+		}
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 
 	// Add middleware
 	r.Use(middleware.Recovery())
