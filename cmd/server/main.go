@@ -65,6 +65,7 @@ func main() {
 		authorized.POST("/templates", handlers.CreateTemplate)
 		authorized.GET("/templates", handlers.ListTemplates)
 		authorized.GET("/templates/:id", handlers.GetTemplate)
+		authorized.GET("/templates/:id/download", handlers.DownloadTemplate)
 		authorized.PUT("/templates/:id", handlers.UpdateTemplate)
 		authorized.DELETE("/templates/:id", handlers.DeleteTemplate)
 

@@ -600,6 +600,33 @@ func DeleteTemplate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Template deleted successfully"})
 }
 
+// DownloadTemplate 下载模板文件
+func DownloadTemplate(c *gin.Context) {
+	id := c.Param("id")
+	var template models.ExcelTemplate
+	if err := database.DB.First(&template, id).Error; err != nil {
+		c.Error(errors.ErrNotFound)
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+
+	// 权限检查：管理员可以下载所有模板，普通用户只能下载自己的模板
+	if role.(string) != "admin" && template.UserID != userID.(uint) {
+		c.Error(errors.ErrForbidden)
+		return
+	}
+
+	// 设置响应头，告诉浏览器这是一个文件下载
+	c.Header("Content-Disposition", "attachment; filename="+template.Name)
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Header("Content-Length", fmt.Sprintf("%d", len(template.Template)))
+
+	// 写入文件内容
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", template.Template)
+}
+
 // DataSource handlers
 func CreateDataSource(c *gin.Context) {
 	var dataSource models.DataSource
