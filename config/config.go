@@ -12,7 +12,8 @@ type Config struct {
 		Port string
 	}
 	JWT struct {
-		Secret string
+		Secret          string
+		ExpirationHours int
 	}
 	Database struct {
 		Type string
@@ -43,6 +44,7 @@ func LoadConfig() {
 
 	AppConfig.Server.Port = viper.GetString("server.port")
 	AppConfig.JWT.Secret = viper.GetString("jwt.secret")
+	AppConfig.JWT.ExpirationHours = viper.GetInt("jwt.expiration_hours")
 	AppConfig.Database.Type = viper.GetString("database.type")
 	AppConfig.Database.DSN = viper.GetString("database.dsn")
 

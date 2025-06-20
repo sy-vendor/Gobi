@@ -38,6 +38,9 @@ var (
 	ErrInternalServer     = &CustomError{Code: http.StatusInternalServerError, Message: "Internal server error"}
 	ErrDatabaseOperation  = &CustomError{Code: http.StatusInternalServerError, Message: "Database operation failed"}
 	ErrInvalidToken       = &CustomError{Code: http.StatusUnauthorized, Message: "Invalid token"}
+	ErrTokenExpired       = &CustomError{Code: http.StatusUnauthorized, Message: "Token expired"}
+	ErrTokenNotValidYet   = &CustomError{Code: http.StatusUnauthorized, Message: "Token not valid yet"}
+	ErrTokenMissingClaims = &CustomError{Code: http.StatusUnauthorized, Message: "Token missing required claims"}
 	ErrUserExists         = &CustomError{Code: http.StatusConflict, Message: "User already exists"}
 	ErrInvalidCredentials = &CustomError{Code: http.StatusUnauthorized, Message: "Invalid credentials"}
 )

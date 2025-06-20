@@ -3,6 +3,7 @@ default:
     port: "8080"
   jwt:
     secret: "default_jwt_secret"
+    expiration_hours: 168  # 7天 = 24 * 7
   database:
     type: "sqlite"
     dsn: "gobi.db"
@@ -12,6 +13,7 @@ dev:
     port: "8080"
   jwt:
     secret: "dev_jwt_secret"
+    expiration_hours: 168  # 7天
   database:
     type: "mysql"
     dsn: "user:password@tcp(127.0.0.1:3306)/gobi?charset=utf8mb4&parseTime=True&loc=Local"
@@ -21,6 +23,7 @@ prod:
     port: "8080"
   jwt:
     secret: "prod_jwt_secret"
+    expiration_hours: 168  # 7天
   database:
     type: "postgres"
     dsn: "host=localhost user=postgres password=pass dbname=gobi port=5432 sslmode=disable" 
