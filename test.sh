@@ -91,7 +91,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 # 8. 测试图表类型
 echo -e "\n${GREEN}8. 测试不同图表类型${NC}"
-for type in "bar" "pie" "line" "scatter" "area" "radar" "gauge" "funnel"; do
+for type in "bar" "pie" "line" "scatter" "area" "radar" "gauge" "funnel" "3d-bar" "3d-scatter" "3d-surface" "3d-bubble"; do
   echo "Creating $type chart..."
   curl -X POST http://localhost:8080/api/charts \
     -H "Content-Type: application/json" \

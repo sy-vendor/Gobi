@@ -447,6 +447,27 @@ func CreateChart(c *gin.Context) {
 		return
 	}
 
+	// 验证图表类型
+	validChartTypes := map[string]bool{
+		"bar":        true,
+		"line":       true,
+		"pie":        true,
+		"scatter":    true,
+		"radar":      true,
+		"heatmap":    true,
+		"gauge":      true,
+		"funnel":     true,
+		"3d-bar":     true,
+		"3d-scatter": true,
+		"3d-surface": true,
+		"3d-bubble":  true,
+	}
+
+	if !validChartTypes[req.Type] {
+		c.Error(errors.NewBadRequestError("Invalid chart type", nil))
+		return
+	}
+
 	userID, _ := c.Get("userID")
 	chart := models.Chart{
 		Name:        req.Name,

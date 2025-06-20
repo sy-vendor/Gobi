@@ -119,6 +119,10 @@ Supported chart types: | 支持的图表类型：
 - Heat maps | 热力图
 - Gauge charts | 仪表盘
 - Funnel charts | 漏斗图
+- **3D Bar charts | 3D柱状图**
+- **3D Scatter plots | 3D散点图**
+- **3D Surface charts | 3D曲面图**
+- **3D Bubble charts | 3D气泡图**
 
 ## Cron Expression Guide | Cron表达式指南
 
