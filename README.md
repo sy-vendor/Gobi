@@ -6,8 +6,6 @@ A minimal viable product (MVP) for a Business Intelligence engine built with Go.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://github.com/sy-vendor/gobi/actions/workflows/go.yml/badge.svg)](https://github.com/sy-vendor/gobi/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sy-vendor/gobi)](https://goreportcard.com/report/github.com/sy-vendor/gobi)
-[![GitHub issues](https://img.shields.io/github/issues/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/pulls)
 [![GitHub stars](https://img.shields.io/github/stars/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/stargazers)
 
 # Gobi - BI 引擎最小可行产品
