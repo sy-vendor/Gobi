@@ -7,6 +7,7 @@ import (
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -314,7 +315,7 @@ func DownloadReport(c *gin.Context) {
 
 	c.Header("Content-Disposition", "attachment; filename="+fileName)
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Length", string(len(report.Content)))
+	c.Header("Content-Length", strconv.Itoa(len(report.Content)))
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", report.Content)
 }
 
