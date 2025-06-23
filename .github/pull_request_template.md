@@ -24,7 +24,7 @@ Please provide a brief description of the changes in this pull request.
 
 ## ✅ Checklist
 
-- [ ] I have read the [CONTRIBUTING.md](https://github.com/yourusername/gobi/blob/main/CONTRIBUTING.md) document.
+- [ ] I have read the [CONTRIBUTING.md](https://github.com/sy-vendor/gobi/blob/main/CONTRIBUTING.md) document.
 - [ ] My code follows the style guidelines of this project.
 - [ ] I have performed a self-review of my own code.
 - [ ] I have commented my code, particularly in hard-to-understand areas.

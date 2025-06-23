@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"gobi/internal/models"
+	"gobi/internal/services"
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
 	"net/http"
@@ -16,12 +17,254 @@ import (
 
 // ReportHandler holds dependencies for report-related handlers.
 type ReportHandler struct {
-	DB *gorm.DB
+	DB                      *gorm.DB
+	ReportService           *services.ReportService
+	ReportScheduleService   *services.ReportScheduleService
+	ReportGenerationService *services.ReportGenerationService
 }
 
 // NewReportHandler creates a new ReportHandler.
 func NewReportHandler(db *gorm.DB) *ReportHandler {
-	return &ReportHandler{DB: db}
+	return &ReportHandler{
+		DB:                      db,
+		ReportService:           services.NewReportService(db),
+		ReportScheduleService:   services.NewReportScheduleService(db),
+		ReportGenerationService: services.NewReportGenerationService(db),
+	}
+}
+
+// CreateReport creates a new report
+func (h *ReportHandler) CreateReport(c *gin.Context) {
+	var report models.Report
+	if err := c.ShouldBindJSON(&report); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_report",
+			"error":  err.Error(),
+		}).Warn("Invalid report data")
+		c.Error(errors.NewBadRequestError("Invalid report data", err))
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	if err := h.ReportService.CreateReport(&report, userID.(uint)); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "create_report",
+			"userID": userID,
+			"error":  err.Error(),
+		}).Error("Failed to create report")
+		c.Error(err)
+		return
+	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "create_report",
+		"userID":   userID,
+		"reportID": report.ID,
+	}).Info("Report created successfully")
+
+	c.JSON(http.StatusCreated, report)
+}
+
+// ListReports lists all reports for the user
+func (h *ReportHandler) ListReports(c *gin.Context) {
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+
+	reports, err := h.ReportService.ListReports(userID.(uint), isAdmin)
+	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action": "list_reports",
+			"userID": userID,
+			"error":  err.Error(),
+		}).Error("Failed to list reports")
+		c.Error(err)
+		return
+	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":  "list_reports",
+		"userID":  userID,
+		"count":   len(reports),
+		"isAdmin": isAdmin,
+	}).Info("Reports listed successfully")
+
+	c.JSON(http.StatusOK, reports)
+}
+
+// GetReport gets a specific report
+func (h *ReportHandler) GetReport(c *gin.Context) {
+	id := c.Param("id")
+	reportID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid report ID", err))
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+
+	report, err := h.ReportService.GetReport(uint(reportID), userID.(uint), isAdmin)
+	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "get_report",
+			"userID":   userID,
+			"reportID": reportID,
+			"error":    err.Error(),
+		}).Error("Failed to get report")
+		c.Error(err)
+		return
+	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "get_report",
+		"userID":   userID,
+		"reportID": reportID,
+	}).Info("Report retrieved successfully")
+
+	c.JSON(http.StatusOK, report)
+}
+
+// UpdateReport updates a report
+func (h *ReportHandler) UpdateReport(c *gin.Context) {
+	id := c.Param("id")
+	reportID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid report ID", err))
+		return
+	}
+
+	var req models.Report
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "update_report",
+			"reportID": reportID,
+			"error":    err.Error(),
+		}).Warn("Invalid report data")
+		c.Error(errors.NewBadRequestError("Invalid report data", err))
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+
+	report, err := h.ReportService.UpdateReport(uint(reportID), &req, userID.(uint), isAdmin)
+	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "update_report",
+			"userID":   userID,
+			"reportID": reportID,
+			"error":    err.Error(),
+		}).Error("Failed to update report")
+		c.Error(err)
+		return
+	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "update_report",
+		"userID":   userID,
+		"reportID": reportID,
+	}).Info("Report updated successfully")
+
+	c.JSON(http.StatusOK, report)
+}
+
+// DeleteReport deletes a report
+func (h *ReportHandler) DeleteReport(c *gin.Context) {
+	id := c.Param("id")
+	reportID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid report ID", err))
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+
+	if err := h.ReportService.DeleteReport(uint(reportID), userID.(uint), isAdmin); err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "delete_report",
+			"userID":   userID,
+			"reportID": reportID,
+			"error":    err.Error(),
+		}).Error("Failed to delete report")
+		c.Error(err)
+		return
+	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "delete_report",
+		"userID":   userID,
+		"reportID": reportID,
+	}).Info("Report deleted successfully")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Report deleted successfully"})
+}
+
+// GenerateReport generates a report based on the report configuration
+func (h *ReportHandler) GenerateReport(c *gin.Context) {
+	id := c.Param("id")
+	reportID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid report ID", err))
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+
+	result, err := h.ReportService.GenerateReport(uint(reportID), userID.(uint), isAdmin)
+	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "generate_report",
+			"userID":   userID,
+			"reportID": reportID,
+			"error":    err.Error(),
+		}).Error("Failed to generate report")
+		c.Error(err)
+		return
+	}
+
+	utils.Logger.WithFields(map[string]interface{}{
+		"action":   "generate_report",
+		"userID":   userID,
+		"reportID": reportID,
+		"status":   result.Status,
+	}).Info("Report generation completed")
+
+	c.JSON(http.StatusOK, result)
+}
+
+// GetReportStatus gets the current status of a report
+func (h *ReportHandler) GetReportStatus(c *gin.Context) {
+	id := c.Param("id")
+	reportID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid report ID", err))
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+
+	result, err := h.ReportService.GetReportStatus(uint(reportID), userID.(uint), isAdmin)
+	if err != nil {
+		utils.Logger.WithFields(map[string]interface{}{
+			"action":   "get_report_status",
+			"userID":   userID,
+			"reportID": reportID,
+			"error":    err.Error(),
+		}).Error("Failed to get report status")
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // CreateReportSchedule creates a new report schedule
@@ -79,13 +322,13 @@ func (h *ReportHandler) CreateReportSchedule(c *gin.Context) {
 		NextRun:     nextRun,
 	}
 
-	if err := h.DB.Create(&schedule).Error; err != nil {
+	if err := h.ReportScheduleService.CreateReportSchedule(&schedule, userID); err != nil {
 		utils.Logger.WithFields(map[string]interface{}{
 			"action": "create_report_schedule",
 			"userID": userID,
 			"error":  err.Error(),
 		}).Error("Failed to create report schedule")
-		c.Error(errors.WrapError(err, "Could not create report schedule"))
+		c.Error(err)
 		return
 	}
 
@@ -103,21 +346,16 @@ func (h *ReportHandler) CreateReportSchedule(c *gin.Context) {
 func (h *ReportHandler) ListReportSchedules(c *gin.Context) {
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
+	isAdmin := role == "admin"
 
-	var schedules []models.ReportSchedule
-	query := h.DB.Model(&models.ReportSchedule{})
-
-	if role != "admin" {
-		query = query.Where("user_id = ?", userID)
-	}
-
-	if err := query.Find(&schedules).Error; err != nil {
+	schedules, err := h.ReportScheduleService.ListReportSchedules(userID, isAdmin)
+	if err != nil {
 		utils.Logger.WithFields(map[string]interface{}{
 			"action": "list_report_schedules",
 			"userID": userID,
 			"error":  err.Error(),
 		}).Error("Failed to list report schedules")
-		c.Error(errors.WrapError(err, "Could not fetch report schedules"))
+		c.Error(err)
 		return
 	}
 
@@ -127,17 +365,19 @@ func (h *ReportHandler) ListReportSchedules(c *gin.Context) {
 // GetReportSchedule gets a specific report schedule
 func (h *ReportHandler) GetReportSchedule(c *gin.Context) {
 	id := c.Param("id")
-	userID := c.GetUint("userID")
-	role := c.GetString("role")
-
-	var schedule models.ReportSchedule
-	if err := h.DB.First(&schedule, id).Error; err != nil {
-		c.Error(errors.ErrNotFound)
+	scheduleID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid schedule ID", err))
 		return
 	}
 
-	if role != "admin" && schedule.UserID != userID {
-		c.Error(errors.ErrForbidden)
+	userID := c.GetUint("userID")
+	role := c.GetString("role")
+	isAdmin := role == "admin"
+
+	schedule, err := h.ReportScheduleService.GetReportSchedule(uint(scheduleID), userID, isAdmin)
+	if err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -147,19 +387,15 @@ func (h *ReportHandler) GetReportSchedule(c *gin.Context) {
 // UpdateReportSchedule updates a report schedule
 func (h *ReportHandler) UpdateReportSchedule(c *gin.Context) {
 	id := c.Param("id")
+	scheduleID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid schedule ID", err))
+		return
+	}
+
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
-
-	var schedule models.ReportSchedule
-	if err := h.DB.First(&schedule, id).Error; err != nil {
-		c.Error(errors.ErrNotFound)
-		return
-	}
-
-	if role != "admin" && schedule.UserID != userID {
-		c.Error(errors.ErrForbidden)
-		return
-	}
+	isAdmin := role == "admin"
 
 	var req struct {
 		Name        string `json:"name"`
@@ -170,67 +406,43 @@ func (h *ReportHandler) UpdateReportSchedule(c *gin.Context) {
 		CronPattern string `json:"cron_pattern"`
 		Active      *bool  `json:"active"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(errors.NewBadRequestError("Invalid report schedule data", err))
 		return
 	}
 
-	if req.Name != "" {
-		schedule.Name = req.Name
-	}
-	if req.Type != "" {
-		schedule.Type = req.Type
-	}
+	// Convert arrays to JSON strings if provided
+	var queryIDs, chartIDs, templateIDs string
 	if req.QueryIDs != nil {
-		queryIDs, _ := json.Marshal(req.QueryIDs)
-		schedule.Queries = string(queryIDs)
+		queryIDsBytes, _ := json.Marshal(req.QueryIDs)
+		queryIDs = string(queryIDsBytes)
 	}
 	if req.ChartIDs != nil {
-		chartIDs, _ := json.Marshal(req.ChartIDs)
-		schedule.Charts = string(chartIDs)
+		chartIDsBytes, _ := json.Marshal(req.ChartIDs)
+		chartIDs = string(chartIDsBytes)
 	}
 	if req.TemplateIDs != nil {
-		templateIDs, _ := json.Marshal(req.TemplateIDs)
-		schedule.Templates = string(templateIDs)
+		templateIDsBytes, _ := json.Marshal(req.TemplateIDs)
+		templateIDs = string(templateIDsBytes)
 	}
-	if req.CronPattern != "" {
-		// 验证新的cron表达式
-		parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-		_, err := parser.Parse(req.CronPattern)
-		if err != nil {
-			utils.Logger.WithFields(map[string]interface{}{
-				"action":      "update_report_schedule",
-				"cronPattern": req.CronPattern,
-				"error":       err.Error(),
-			}).Warn("Invalid cron pattern")
-			c.Error(errors.NewBadRequestError("Invalid cron pattern", err))
-			return
-		}
-		schedule.CronPattern = req.CronPattern
-		// 重新计算下次运行时间
-		schedule.NextRun = calculateNextRunFromCron(req.CronPattern)
+
+	updates := &models.ReportSchedule{
+		Name:        req.Name,
+		Type:        req.Type,
+		Queries:     queryIDs,
+		Charts:      chartIDs,
+		Templates:   templateIDs,
+		CronPattern: req.CronPattern,
 	}
 	if req.Active != nil {
-		schedule.Active = *req.Active
+		updates.Active = *req.Active
 	}
 
-	if err := h.DB.Save(&schedule).Error; err != nil {
-		utils.Logger.WithFields(map[string]interface{}{
-			"action": "update_report_schedule",
-			"userID": userID,
-			"error":  err.Error(),
-		}).Error("Failed to update report schedule")
-		c.Error(errors.WrapError(err, "Could not update report schedule"))
+	schedule, err := h.ReportScheduleService.UpdateReportSchedule(uint(scheduleID), updates, userID, isAdmin)
+	if err != nil {
+		c.Error(err)
 		return
 	}
-
-	utils.Logger.WithFields(map[string]interface{}{
-		"action":     "update_report_schedule",
-		"userID":     userID,
-		"scheduleID": schedule.ID,
-		"nextRun":    schedule.NextRun,
-	}).Info("Report schedule updated successfully")
 
 	c.JSON(http.StatusOK, schedule)
 }
@@ -238,34 +450,30 @@ func (h *ReportHandler) UpdateReportSchedule(c *gin.Context) {
 // DeleteReportSchedule deletes a report schedule
 func (h *ReportHandler) DeleteReportSchedule(c *gin.Context) {
 	id := c.Param("id")
+	scheduleID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid schedule ID", err))
+		return
+	}
+
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
+	isAdmin := role == "admin"
 
-	var schedule models.ReportSchedule
-	if err := h.DB.First(&schedule, id).Error; err != nil {
-		c.Error(errors.ErrNotFound)
-		return
-	}
-
-	if role != "admin" && schedule.UserID != userID {
-		c.Error(errors.ErrForbidden)
-		return
-	}
-
-	if err := h.DB.Delete(&schedule).Error; err != nil {
+	if err := h.ReportScheduleService.DeleteReportSchedule(uint(scheduleID), userID, isAdmin); err != nil {
 		utils.Logger.WithFields(map[string]interface{}{
 			"action": "delete_report_schedule",
 			"userID": userID,
 			"error":  err.Error(),
 		}).Error("Failed to delete report schedule")
-		c.Error(errors.WrapError(err, "Could not delete report schedule"))
+		c.Error(err)
 		return
 	}
 
 	utils.Logger.WithFields(map[string]interface{}{
 		"action":     "delete_report_schedule",
 		"userID":     userID,
-		"scheduleID": schedule.ID,
+		"scheduleID": scheduleID,
 	}).Info("Report schedule deleted successfully")
 
 	c.JSON(http.StatusOK, gin.H{"message": "Report schedule deleted successfully"})
@@ -280,13 +488,17 @@ func (h *ReportHandler) GeneratePDFReport(c *gin.Context) {
 		c.Error(errors.NewBadRequestError("Invalid request", err))
 		return
 	}
-	var chart models.Chart
-	if err := h.DB.First(&chart, req.ChartID).Error; err != nil {
-		c.Error(errors.ErrNotFound)
+
+	userID := c.GetUint("userID")
+	role := c.GetString("role")
+	isAdmin := role == "admin"
+
+	pdfBytes, err := h.ReportGenerationService.GeneratePDFReport(req.ChartID, userID, isAdmin)
+	if err != nil {
+		c.Error(err)
 		return
 	}
-	// TODO: Replace with actual PDF generation logic
-	pdfBytes := []byte("Fake PDF content for chart: " + chart.Name)
+
 	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
 
@@ -300,66 +512,40 @@ func (h *ReportHandler) GenerateExcelReport(c *gin.Context) {
 		c.Error(errors.NewBadRequestError("Invalid request", err))
 		return
 	}
-	var chart models.Chart
-	if err := h.DB.First(&chart, req.ChartID).Error; err != nil {
-		c.Error(errors.ErrNotFound)
-		return
-	}
-	var template models.ExcelTemplate
-	if err := h.DB.First(&template, req.TemplateID).Error; err != nil {
-		c.Error(errors.ErrNotFound)
-		return
-	}
-	excelBytes, err := utils.GenerateExcelFromTemplate(chart.Data, template.Template, strconv.Itoa(int(chart.ID)))
-	if err != nil {
-		c.Error(errors.WrapError(err, "Could not generate excel report"))
-		return
-	}
-	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelBytes)
-}
 
-// ListReports lists all generated reports for the user
-func (h *ReportHandler) ListReports(c *gin.Context) {
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
+	isAdmin := role == "admin"
 
-	var reports []models.Report
-	query := h.DB.Model(&models.Report{})
-
-	if role != "admin" {
-		query = query.Where("user_id = ?", userID)
-	}
-
-	if err := query.Find(&reports).Error; err != nil {
-		utils.Logger.WithFields(map[string]interface{}{
-			"action": "list_reports",
-			"userID": userID,
-			"error":  err.Error(),
-		}).Error("Failed to list reports")
-		c.Error(errors.WrapError(err, "Could not fetch reports"))
+	excelBytes, err := h.ReportGenerationService.GenerateExcelReport(req.ChartID, req.TemplateID, userID, isAdmin)
+	if err != nil {
+		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, reports)
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelBytes)
 }
 
 // DownloadReport downloads a generated report
 func (h *ReportHandler) DownloadReport(c *gin.Context) {
 	id := c.Param("id")
+	reportID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid report ID", err))
+		return
+	}
+
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
+	isAdmin := role == "admin"
 
-	var report models.Report
-	if err := h.DB.First(&report, id).Error; err != nil {
-		c.Error(errors.ErrNotFound)
+	report, err := h.ReportGenerationService.DownloadReport(uint(reportID), userID, isAdmin)
+	if err != nil {
+		c.Error(err)
 		return
 	}
 
-	if role != "admin" && report.UserID != userID {
-		c.Error(errors.ErrForbidden)
-		return
-	}
-
+	// Generate filename
 	fileName := report.Name
 	if report.Type == "daily" {
 		fileName += "_" + report.GeneratedAt.Format("2006-01-02")
