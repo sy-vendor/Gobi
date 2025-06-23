@@ -1,11 +1,17 @@
 package main
 
 import (
+	"context"
 	"gobi/config"
 	"gobi/internal/handlers"
 	"gobi/internal/middleware"
 	"gobi/pkg/database"
 	"gobi/pkg/utils"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -18,25 +24,27 @@ import (
 )
 
 func main() {
-	// 自动加载 .env 文件
 	_ = godotenv.Load()
 
-	// 加载 config.yaml 配置
 	config.LoadConfig()
 	cfg := config.AppConfig
 
-	// Initialize database
 	if err := database.InitDB(&cfg); err != nil {
 		utils.Logger.Fatalf("Failed to initialize database: %v", err)
 	}
+	db := database.GetDB()
 
-	// Initialize query cache (default 5 min, cleanup 10 min)
+	defer database.CloseAllConnections()
+
 	utils.InitQueryCache(5*time.Minute, 10*time.Minute)
+	utils.InitReportGenerator()
+	defer utils.StopReportGenerator()
 
-	// Create Gin router
+	h := handlers.NewHandler(db)
+	reportHandler := handlers.NewReportHandler(db)
+
 	r := gin.New()
 
-	// CORS 中间件
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5173",
@@ -49,19 +57,16 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// API 限流中间件（全局，10 req/s）
 	rate, _ := limiterlib.NewRateFromFormatted("10-S")
 	store := memory.NewStore()
 	instance := ginlimiter.NewMiddleware(limiterlib.New(store, rate))
 	r.Use(instance)
 
-	// Prometheus metrics
 	p := ginprometheus.NewPrometheus("gobi")
 	p.Use(r)
 
-	// 健康检查接口
 	r.GET("/healthz", func(c *gin.Context) {
-		sqlDB, err := database.DB.DB()
+		sqlDB, err := db.DB()
 		if err != nil || sqlDB.Ping() != nil {
 			c.JSON(500, gin.H{"status": "db error"})
 			return
@@ -69,82 +74,91 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// Add middleware
 	r.Use(middleware.Recovery())
 	r.Use(middleware.ErrorHandler())
 	r.Use(gin.Logger())
 
 	// Public routes
-	r.POST("/api/auth/login", handlers.Login)
-	r.POST("/api/auth/register", handlers.Register)
+	r.POST("/api/auth/login", h.Login)
+	r.POST("/api/auth/register", h.CreateUser)
 
 	// Protected routes
 	authorized := r.Group("/api")
 	authorized.Use(middleware.AuthMiddleware(&cfg))
 	{
 		// Query routes
-		authorized.POST("/queries", handlers.CreateQuery)
-		authorized.GET("/queries", handlers.ListQueries)
-		authorized.GET("/queries/:id", handlers.GetQuery)
-		authorized.PUT("/queries/:id", handlers.UpdateQuery)
-		authorized.DELETE("/queries/:id", handlers.DeleteQuery)
-		authorized.POST("/queries/:id/execute", handlers.ExecuteQuery)
+		authorized.POST("/queries", h.CreateQuery)
+		authorized.GET("/queries", h.ListQueries)
+		authorized.GET("/queries/:id", h.GetQuery)
+		authorized.PUT("/queries/:id", h.UpdateQuery)
+		authorized.DELETE("/queries/:id", h.DeleteQuery)
+		authorized.POST("/queries/:id/execute", h.ExecuteQuery)
 
 		// Data source routes
-		authorized.POST("/datasources", handlers.CreateDataSource)
-		authorized.GET("/datasources", handlers.ListDataSources)
-		authorized.GET("/datasources/:id", handlers.GetDataSource)
-		authorized.PUT("/datasources/:id", handlers.UpdateDataSource)
-		authorized.DELETE("/datasources/:id", handlers.DeleteDataSource)
+		authorized.POST("/datasources", h.CreateDataSource)
+		authorized.GET("/datasources", h.ListDataSources)
+		authorized.GET("/datasources/:id", h.GetDataSource)
+		authorized.PUT("/datasources/:id", h.UpdateDataSource)
+		authorized.DELETE("/datasources/:id", h.DeleteDataSource)
+		authorized.POST("/datasources/test", h.TestDatabaseConnection)
 
 		// Chart routes
-		authorized.POST("/charts", handlers.CreateChart)
-		authorized.GET("/charts", handlers.ListCharts)
-		authorized.GET("/charts/:id", handlers.GetChart)
-		authorized.PUT("/charts/:id", handlers.UpdateChart)
-		authorized.DELETE("/charts/:id", handlers.DeleteChart)
+		authorized.POST("/charts", h.CreateChart)
+		authorized.GET("/charts", h.ListCharts)
+		authorized.GET("/charts/:id", h.GetChart)
+		authorized.PUT("/charts/:id", h.UpdateChart)
+		authorized.DELETE("/charts/:id", h.DeleteChart)
 
 		// Excel template routes
-		authorized.POST("/templates", handlers.CreateTemplate)
-		authorized.GET("/templates", handlers.ListTemplates)
-		authorized.GET("/templates/:id", handlers.GetTemplate)
-		authorized.GET("/templates/:id/download", handlers.DownloadTemplate)
-		authorized.PUT("/templates/:id", handlers.UpdateTemplate)
-		authorized.DELETE("/templates/:id", handlers.DeleteTemplate)
+		authorized.POST("/templates", h.UploadTemplate)
+		authorized.GET("/templates", h.ListTemplates)
+		authorized.GET("/templates/:id/download", h.DownloadTemplate)
 
 		// Cache clear (admin only)
-		authorized.POST("/cache/clear", handlers.ClearCache)
+		authorized.POST("/cache/clear", h.ClearCache)
 
 		// Dashboard stats
-		authorized.GET("/dashboard/stats", handlers.DashboardStats)
+		authorized.GET("/dashboard/stats", h.DashboardStats)
 
 		// User list
-		authorized.GET("/users", handlers.ListUsers)
-		// User update
-		authorized.PUT("/users/:id", handlers.UpdateUser)
-		// User reset password
-		authorized.POST("/users/:id/reset-password", handlers.ResetUserPassword)
-		// User delete
-		authorized.DELETE("/users/:id", handlers.DeleteUser)
+		authorized.GET("/users", h.ListUsers)
+		authorized.PUT("/users/:id", h.UpdateUser)
+		authorized.DELETE("/users/:id", h.DeleteUser)
 
 		// Report schedule routes
-		authorized.POST("/reports/schedules", handlers.CreateReportSchedule)
-		authorized.GET("/reports/schedules", handlers.ListReportSchedules)
-		authorized.GET("/reports/schedules/:id", handlers.GetReportSchedule)
-		authorized.PUT("/reports/schedules/:id", handlers.UpdateReportSchedule)
-		authorized.DELETE("/reports/schedules/:id", handlers.DeleteReportSchedule)
+		authorized.POST("/reports/schedules", reportHandler.CreateReportSchedule)
+		authorized.GET("/reports/schedules", reportHandler.ListReportSchedules)
+		authorized.GET("/reports/schedules/:id", reportHandler.GetReportSchedule)
+		authorized.PUT("/reports/schedules/:id", reportHandler.UpdateReportSchedule)
+		authorized.DELETE("/reports/schedules/:id", reportHandler.DeleteReportSchedule)
 
 		// Report routes
-		authorized.GET("/reports", handlers.ListReports)
-		authorized.GET("/reports/:id/download", handlers.DownloadReport)
+		authorized.POST("/reports/generate/excel", reportHandler.GenerateExcelReport)
+		authorized.GET("/reports", reportHandler.ListReports)
+		authorized.GET("/reports/:id/download", reportHandler.DownloadReport)
 	}
 
-	// Initialize report generator
-	utils.InitReportGenerator()
-	defer utils.StopReportGenerator()
-
-	// Start server
-	if err := r.Run(":" + cfg.Server.Port); err != nil {
-		utils.Logger.Fatalf("Failed to start server: %v", err)
+	srv := &http.Server{
+		Addr:    ":" + cfg.Server.Port,
+		Handler: r,
 	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown: ", err)
+	}
+
+	log.Println("Server exiting")
 }
