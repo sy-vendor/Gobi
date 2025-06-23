@@ -562,25 +562,6 @@ func (h *ReportHandler) DownloadReport(c *gin.Context) {
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", report.Content)
 }
 
-// calculateNextRun calculates the next run time based on report type
-func calculateNextRun(reportType string) time.Time {
-	now := time.Now()
-	switch reportType {
-	case "daily":
-		return time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
-	case "weekly":
-		daysUntilNextWeek := 7 - int(now.Weekday())
-		if daysUntilNextWeek == 0 {
-			daysUntilNextWeek = 7
-		}
-		return time.Date(now.Year(), now.Month(), now.Day()+daysUntilNextWeek, 0, 0, 0, 0, now.Location())
-	case "monthly":
-		return time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location())
-	default:
-		return now
-	}
-}
-
 // calculateNextRunFromCron calculates the next run time based on cron pattern
 func calculateNextRunFromCron(cronPattern string) time.Time {
 	now := time.Now()
