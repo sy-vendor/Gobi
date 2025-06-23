@@ -2,6 +2,12 @@
 
 A minimal viable product (MVP) for a Business Intelligence engine built with Go.
 
+![Go Version](https://img.shields.io/badge/Go-1.23+-blue.svg)
+![Go Report Card](https://goreportcard.com/badge/github.com/yourusername/gobi)
+![Build Status](https://github.com/yourusername/gobi/actions/workflows/go.yml/badge.svg)
+![License](https://img.shields.io/github/license/yourusername/gobi)
+![Docker Ready](https://img.shields.io/badge/Docker-Ready-blue.svg)
+
 # Gobi - BI 引擎最小可行产品
 
 一个使用 Go 语言构建的商业智能引擎最小可行产品。
