@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"gobi/internal/models"
-	"gobi/pkg/database"
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
 	"net/http"
@@ -12,10 +11,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
+	"gorm.io/gorm"
 )
 
+// ReportHandler holds dependencies for report-related handlers.
+type ReportHandler struct {
+	DB *gorm.DB
+}
+
+// NewReportHandler creates a new ReportHandler.
+func NewReportHandler(db *gorm.DB) *ReportHandler {
+	return &ReportHandler{DB: db}
+}
+
 // CreateReportSchedule creates a new report schedule
-func CreateReportSchedule(c *gin.Context) {
+func (h *ReportHandler) CreateReportSchedule(c *gin.Context) {
 	var req struct {
 		Name        string `json:"name" binding:"required"`
 		Type        string `json:"type" binding:"required,oneof=daily weekly monthly"`
@@ -69,7 +79,7 @@ func CreateReportSchedule(c *gin.Context) {
 		NextRun:     nextRun,
 	}
 
-	if err := database.DB.Create(&schedule).Error; err != nil {
+	if err := h.DB.Create(&schedule).Error; err != nil {
 		utils.Logger.WithFields(map[string]interface{}{
 			"action": "create_report_schedule",
 			"userID": userID,
@@ -90,12 +100,12 @@ func CreateReportSchedule(c *gin.Context) {
 }
 
 // ListReportSchedules lists all report schedules for the user
-func ListReportSchedules(c *gin.Context) {
+func (h *ReportHandler) ListReportSchedules(c *gin.Context) {
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
 
 	var schedules []models.ReportSchedule
-	query := database.DB.Model(&models.ReportSchedule{})
+	query := h.DB.Model(&models.ReportSchedule{})
 
 	if role != "admin" {
 		query = query.Where("user_id = ?", userID)
@@ -115,13 +125,13 @@ func ListReportSchedules(c *gin.Context) {
 }
 
 // GetReportSchedule gets a specific report schedule
-func GetReportSchedule(c *gin.Context) {
+func (h *ReportHandler) GetReportSchedule(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
 
 	var schedule models.ReportSchedule
-	if err := database.DB.First(&schedule, id).Error; err != nil {
+	if err := h.DB.First(&schedule, id).Error; err != nil {
 		c.Error(errors.ErrNotFound)
 		return
 	}
@@ -135,13 +145,13 @@ func GetReportSchedule(c *gin.Context) {
 }
 
 // UpdateReportSchedule updates a report schedule
-func UpdateReportSchedule(c *gin.Context) {
+func (h *ReportHandler) UpdateReportSchedule(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
 
 	var schedule models.ReportSchedule
-	if err := database.DB.First(&schedule, id).Error; err != nil {
+	if err := h.DB.First(&schedule, id).Error; err != nil {
 		c.Error(errors.ErrNotFound)
 		return
 	}
@@ -205,7 +215,7 @@ func UpdateReportSchedule(c *gin.Context) {
 		schedule.Active = *req.Active
 	}
 
-	if err := database.DB.Save(&schedule).Error; err != nil {
+	if err := h.DB.Save(&schedule).Error; err != nil {
 		utils.Logger.WithFields(map[string]interface{}{
 			"action": "update_report_schedule",
 			"userID": userID,
@@ -226,13 +236,13 @@ func UpdateReportSchedule(c *gin.Context) {
 }
 
 // DeleteReportSchedule deletes a report schedule
-func DeleteReportSchedule(c *gin.Context) {
+func (h *ReportHandler) DeleteReportSchedule(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
 
 	var schedule models.ReportSchedule
-	if err := database.DB.First(&schedule, id).Error; err != nil {
+	if err := h.DB.First(&schedule, id).Error; err != nil {
 		c.Error(errors.ErrNotFound)
 		return
 	}
@@ -242,7 +252,7 @@ func DeleteReportSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := database.DB.Delete(&schedule).Error; err != nil {
+	if err := h.DB.Delete(&schedule).Error; err != nil {
 		utils.Logger.WithFields(map[string]interface{}{
 			"action": "delete_report_schedule",
 			"userID": userID,
@@ -261,13 +271,60 @@ func DeleteReportSchedule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Report schedule deleted successfully"})
 }
 
-// ListReports lists all reports for the user
-func ListReports(c *gin.Context) {
+// GeneratePDFReport generates a PDF report from a chart
+func (h *ReportHandler) GeneratePDFReport(c *gin.Context) {
+	var req struct {
+		ChartID uint `json:"chart_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(errors.NewBadRequestError("Invalid request", err))
+		return
+	}
+	var chart models.Chart
+	if err := h.DB.First(&chart, req.ChartID).Error; err != nil {
+		c.Error(errors.ErrNotFound)
+		return
+	}
+	// TODO: Replace with actual PDF generation logic
+	pdfBytes := []byte("Fake PDF content for chart: " + chart.Name)
+	c.Data(http.StatusOK, "application/pdf", pdfBytes)
+}
+
+// GenerateExcelReport generates an Excel report from a chart and template
+func (h *ReportHandler) GenerateExcelReport(c *gin.Context) {
+	var req struct {
+		ChartID    uint `json:"chart_id"`
+		TemplateID uint `json:"template_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(errors.NewBadRequestError("Invalid request", err))
+		return
+	}
+	var chart models.Chart
+	if err := h.DB.First(&chart, req.ChartID).Error; err != nil {
+		c.Error(errors.ErrNotFound)
+		return
+	}
+	var template models.ExcelTemplate
+	if err := h.DB.First(&template, req.TemplateID).Error; err != nil {
+		c.Error(errors.ErrNotFound)
+		return
+	}
+	excelBytes, err := utils.GenerateExcelFromTemplate(chart.Data, template.Template, strconv.Itoa(int(chart.ID)))
+	if err != nil {
+		c.Error(errors.WrapError(err, "Could not generate excel report"))
+		return
+	}
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelBytes)
+}
+
+// ListReports lists all generated reports for the user
+func (h *ReportHandler) ListReports(c *gin.Context) {
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
 
 	var reports []models.Report
-	query := database.DB.Model(&models.Report{})
+	query := h.DB.Model(&models.Report{})
 
 	if role != "admin" {
 		query = query.Where("user_id = ?", userID)
@@ -286,14 +343,14 @@ func ListReports(c *gin.Context) {
 	c.JSON(http.StatusOK, reports)
 }
 
-// DownloadReport downloads a specific report
-func DownloadReport(c *gin.Context) {
+// DownloadReport downloads a generated report
+func (h *ReportHandler) DownloadReport(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.GetUint("userID")
 	role := c.GetString("role")
 
 	var report models.Report
-	if err := database.DB.First(&report, id).Error; err != nil {
+	if err := h.DB.First(&report, id).Error; err != nil {
 		c.Error(errors.ErrNotFound)
 		return
 	}
@@ -340,10 +397,12 @@ func calculateNextRun(reportType string) time.Time {
 
 // calculateNextRunFromCron calculates the next run time based on cron pattern
 func calculateNextRunFromCron(cronPattern string) time.Time {
+	now := time.Now()
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	schedule, err := parser.Parse(cronPattern)
 	if err != nil {
-		return time.Now()
+		// 返回一个零时时间或者一个表示错误的将来时间
+		return time.Time{}
 	}
-	return schedule.Next(time.Now())
+	return schedule.Next(now)
 }

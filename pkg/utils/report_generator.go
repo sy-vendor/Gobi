@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"gobi/internal/models"
@@ -27,6 +28,61 @@ func StopReportGenerator() {
 	if reportCron != nil {
 		reportCron.Stop()
 	}
+}
+
+// GenerateExcelFromTemplate populates an Excel template with chart data.
+func GenerateExcelFromTemplate(chartData string, templateData []byte, chartID string) ([]byte, error) {
+	// Unmarshal chart data
+	var data []map[string]interface{}
+	if err := json.Unmarshal([]byte(chartData), &data); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal chart data: %w", err)
+	}
+
+	// Create a reader from the template data
+	r := bytes.NewReader(templateData)
+
+	// Open the template
+	f, err := excelize.OpenReader(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open excel template: %w", err)
+	}
+	defer f.Close()
+
+	// Get the first sheet name
+	sheetName := f.GetSheetName(0)
+	if sheetName == "" {
+		return nil, fmt.Errorf("no sheets found in the template")
+	}
+
+	// Write headers if there's data
+	if len(data) > 0 {
+		col := 1
+		for key := range data[0] {
+			cell, _ := excelize.CoordinatesToCellName(col, 1)
+			f.SetCellValue(sheetName, cell, key)
+			col++
+		}
+	}
+
+	// Write data rows
+	for row, rowData := range data {
+		col := 1
+		// This assumes consistent key order, which is not guaranteed for maps.
+		// For production, it's better to have a fixed order of columns.
+		for _, value := range rowData {
+			cell, _ := excelize.CoordinatesToCellName(col, row+2)
+			f.SetCellValue(sheetName, cell, value)
+			col++
+		}
+	}
+
+	// Write to buffer
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		return nil, fmt.Errorf("failed to write excel to buffer: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // checkAndGenerateReports checks for reports that need to be generated
