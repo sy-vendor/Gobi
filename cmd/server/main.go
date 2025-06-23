@@ -86,6 +86,9 @@ func main() {
 	authorized := r.Group("/api")
 	authorized.Use(middleware.AuthMiddleware(&cfg))
 	{
+		// User routes
+		authorized.GET("/me", h.GetMe)
+
 		// Query routes
 		authorized.POST("/queries", h.CreateQuery)
 		authorized.GET("/queries", h.ListQueries)
@@ -112,7 +115,10 @@ func main() {
 		// Excel template routes
 		authorized.POST("/templates", h.UploadTemplate)
 		authorized.GET("/templates", h.ListTemplates)
+		authorized.GET("/templates/:id", h.GetTemplate)
+		authorized.PUT("/templates/:id", h.UpdateTemplate)
 		authorized.GET("/templates/:id/download", h.DownloadTemplate)
+		authorized.DELETE("/templates/:id", h.DeleteTemplate)
 
 		// Cache clear (admin only)
 		authorized.POST("/cache/clear", h.ClearCache)
@@ -120,10 +126,20 @@ func main() {
 		// Dashboard stats
 		authorized.GET("/dashboard/stats", h.DashboardStats)
 
-		// User list
+		// User management (admin only)
 		authorized.GET("/users", h.ListUsers)
 		authorized.PUT("/users/:id", h.UpdateUser)
 		authorized.DELETE("/users/:id", h.DeleteUser)
+		authorized.POST("/users/:id/reset-password", h.ResetPassword)
+
+		// Report routes
+		authorized.POST("/reports", reportHandler.CreateReport)
+		authorized.GET("/reports", reportHandler.ListReports)
+		authorized.GET("/reports/:id", reportHandler.GetReport)
+		authorized.PUT("/reports/:id", reportHandler.UpdateReport)
+		authorized.DELETE("/reports/:id", reportHandler.DeleteReport)
+		authorized.POST("/reports/:id/generate", reportHandler.GenerateReport)
+		authorized.GET("/reports/:id/status", reportHandler.GetReportStatus)
 
 		// Report schedule routes
 		authorized.POST("/reports/schedules", reportHandler.CreateReportSchedule)
@@ -132,9 +148,8 @@ func main() {
 		authorized.PUT("/reports/schedules/:id", reportHandler.UpdateReportSchedule)
 		authorized.DELETE("/reports/schedules/:id", reportHandler.DeleteReportSchedule)
 
-		// Report routes
+		// Legacy report routes (for backward compatibility)
 		authorized.POST("/reports/generate/excel", reportHandler.GenerateExcelReport)
-		authorized.GET("/reports", reportHandler.ListReports)
 		authorized.GET("/reports/:id/download", reportHandler.DownloadReport)
 	}
 

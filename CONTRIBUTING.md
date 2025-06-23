@@ -14,7 +14,7 @@ We welcome contributions from the community! Thank you for your interest in maki
 1.  **Fork the repository**: Click the "Fork" button on the top right of the GitHub page.
 2.  **Clone your fork**:
     ```bash
-    git clone https://github.com/yourusername/gobi.git
+    git clone https://github.com/sy-vendor/gobi.git
     cd gobi
     ```
 3.  **Create a branch**:
