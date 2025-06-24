@@ -143,6 +143,7 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"3d-bubble":  true,
 		"treemap":    true,
 		"sunburst":   true,
+		"tree":       true,
 	}
 
 	if !validChartTypes[chartType] {
