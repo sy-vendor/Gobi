@@ -200,4 +200,3 @@ echo "✓ 3D Bubble Chart creation"
 echo "✓ Invalid chart type validation"
 echo
 echo "3D charts are now supported in Gobi BI Engine!"
-echo "Check the docs/3d_charts_config.md for detailed configuration examples." 

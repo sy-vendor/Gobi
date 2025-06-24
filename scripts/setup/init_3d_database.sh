@@ -28,7 +28,7 @@ echo -e "${GREEN}✓ Database connection successful${NC}"
 echo "2. Creating 3D charts sample tables..."
 
 # 执行SQL脚本
-if sqlite3 "$DB_FILE" < scripts/generate_3d_sample_data.sql; then
+if sqlite3 "$DB_FILE" < ../data/generate_3d_sample_data.sql; then
     echo -e "${GREEN}✓ 3D charts sample data created successfully${NC}"
 else
     echo -e "${RED}✗ Failed to create sample data${NC}"
