@@ -18,6 +18,7 @@ A minimal viable product (MVP) for a Business Intelligence engine built with Go.
 - Interactive chart visualization
 - Excel template management and export
 - User authentication and authorization
+- **API key support for service-to-service authentication**
 - Data isolation between users
 - Dashboard statistics and analytics
 - Scheduled report generation
@@ -80,6 +81,11 @@ default:
 ### Authentication
 - `POST /api/auth/register` — Register a new user
 - `POST /api/auth/login` — Login and get JWT token
+
+### API Key Management
+- `POST /api/apikeys` — Create a new API key
+- `GET /api/apikeys` — List all API keys (user's own or all for admin)
+- `DELETE /api/apikeys/:id` — Revoke an API key
 
 ### Dashboard
 - `GET /api/dashboard/stats` — Get dashboard statistics
@@ -177,6 +183,50 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
+### Create API Key
+
+```bash
+curl -X POST http://localhost:8080/api/apikeys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_jwt_token>" \
+  -d '{
+    "name": "My Service API Key",
+    "expires_at": "2024-12-31T23:59:59Z"
+  }'
+```
+
+**Response:**
+```json
+{
+  "api_key": "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz",
+  "prefix": "abc123def456",
+  "name": "My Service API Key",
+  "expires_at": "2024-12-31T23:59:59Z",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Using API Key Authentication
+
+```bash
+curl -X GET http://localhost:8080/api/queries \
+  -H "Authorization: ApiKey abc123def456ghi789jkl012mno345pqr678stu901vwx234yz"
+```
+
+### List API Keys
+
+```bash
+curl -X GET http://localhost:8080/api/apikeys \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
+### Revoke API Key
+
+```bash
+curl -X DELETE http://localhost:8080/api/apikeys/1 \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
 ### Create Report Schedule
 
 ```bash
@@ -192,6 +242,30 @@ curl -X POST http://localhost:8080/api/reports/schedules \
     "cron_pattern": "35 16 * * *"
   }'
 ```
+
+---
+
+## Authentication Methods
+
+### JWT Authentication
+Use `Authorization: Bearer <jwt_token>` header for user authentication.
+
+### API Key Authentication
+Use `Authorization: ApiKey <api_key>` header for service-to-service authentication.
+
+**API Key Features:**
+- **Secure Generation**: 32-byte random keys with bcrypt hashing
+- **Prefix Indexing**: Fast lookup using key prefixes
+- **Expiration Support**: Optional expiration dates
+- **Revocation**: Ability to revoke keys without deletion
+- **User Isolation**: Users can only manage their own keys
+- **Admin Access**: Administrators can manage all keys
+
+**Security Notes:**
+- API keys are only shown once upon creation
+- Store keys securely and never commit them to version control
+- Use HTTPS in production to protect key transmission
+- Regularly rotate keys for enhanced security
 
 ---
 
@@ -213,14 +287,18 @@ All API errors are returned in JSON format:
 - `Invalid token`
 - `Token expired`
 - `Token missing required claims`
+- `Invalid or expired API key`
 
 ---
 
 ## Security
 
 - JWT authentication for all endpoints
+- **API key authentication for service-to-service communication**
 - Password hashing with bcrypt
+- **API key hashing with bcrypt**
 - User data isolation
+- **Secure random key generation**
 
 ---
 

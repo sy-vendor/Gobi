@@ -10,6 +10,7 @@
 - 交互式图表可视化
 - Excel 模板管理和导出
 - 用户认证和授权
+- **API Key 支持，用于服务间认证**
 - 用户数据隔离
 - 仪表盘统计和分析
 - **定时报告生成**
@@ -64,6 +65,11 @@ default:
 ### 认证
 - POST /api/auth/register - 注册新用户
 - POST /api/auth/login - 登录并获取 JWT 令牌
+
+### API Key 管理
+- POST /api/apikeys - 创建新的 API Key
+- GET /api/apikeys - 列出所有 API Key（用户自己的或管理员可查看所有）
+- DELETE /api/apikeys/:id - 吊销 API Key
 
 ### 仪表盘
 - GET /api/dashboard/stats - 获取仪表盘统计信息
@@ -152,6 +158,46 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
+### 创建 API Key
+```bash
+curl -X POST http://localhost:8080/api/apikeys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_jwt_token>" \
+  -d '{
+    "name": "我的服务 API Key",
+    "expires_at": "2024-12-31T23:59:59Z"
+  }'
+```
+
+**响应：**
+```json
+{
+  "api_key": "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz",
+  "prefix": "abc123def456",
+  "name": "我的服务 API Key",
+  "expires_at": "2024-12-31T23:59:59Z",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### 使用 API Key 认证
+```bash
+curl -X GET http://localhost:8080/api/queries \
+  -H "Authorization: ApiKey abc123def456ghi789jkl012mno345pqr678stu901vwx234yz"
+```
+
+### 列出 API Keys
+```bash
+curl -X GET http://localhost:8080/api/apikeys \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
+### 吊销 API Key
+```bash
+curl -X DELETE http://localhost:8080/api/apikeys/1 \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
 ### 创建定时报告
 ```bash
 curl -X POST http://localhost:8080/api/reports/schedules \
@@ -166,6 +212,32 @@ curl -X POST http://localhost:8080/api/reports/schedules \
     "cron_pattern": "35 16 * * *"
   }'
 ```
+
+---
+
+## 认证方式
+
+### JWT 认证
+使用 `Authorization: Bearer <jwt_token>` 头部进行用户认证。
+
+### API Key 认证
+使用 `Authorization: ApiKey <api_key>` 头部进行服务间认证。
+
+**API Key 特性：**
+- **安全生成**：32字节随机密钥，使用 bcrypt 哈希
+- **前缀索引**：使用密钥前缀进行快速查找
+- **过期支持**：可选的过期日期
+- **吊销功能**：可以吊销密钥而不删除
+- **用户隔离**：用户只能管理自己的密钥
+- **管理员权限**：管理员可以管理所有密钥
+
+**安全注意事项：**
+- API Key 仅在创建时显示一次
+- 请安全存储密钥，切勿提交到版本控制系统
+- 生产环境请使用 HTTPS 保护密钥传输
+- 定期轮换密钥以增强安全性
+
+---
 
 ## 错误处理
 
@@ -184,9 +256,13 @@ curl -X POST http://localhost:8080/api/reports/schedules \
 - `Invalid token` - Token无效
 - `Token expired` - Token已过期
 - `Token missing required claims` - Token缺少必要信息
+- `Invalid or expired API key` - API Key 无效或已过期
 
 ## 安全特性
 
 - 所有接口都需要 JWT 认证
+- **API Key 认证用于服务间通信**
 - 使用 bcrypt 加密密码
-- 用户数据隔离 
+- **API Key 使用 bcrypt 哈希**
+- 用户数据隔离
+- **安全的随机密钥生成** 
