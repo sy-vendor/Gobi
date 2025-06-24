@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"gobi/internal/models"
 	"gobi/pkg/errors"
 	"time"
@@ -137,18 +136,10 @@ func (s *TemplateService) GetDashboardStats() (map[string]interface{}, error) {
 	var todayQueries int64
 
 	today := time.Now().Format("2006-01-02")
-	fmt.Println("[DEBUG] Go-side today:", today)
-
-	var latestCreatedAt time.Time
-	s.db.Model(&models.Query{}).Select("created_at").Order("created_at desc").Limit(1).Scan(&latestCreatedAt)
-	fmt.Println("[DEBUG] Latest created_at in queries:", latestCreatedAt)
-
 	s.db.Model(&models.Query{}).Count(&totalQueries)
 	s.db.Model(&models.Chart{}).Count(&totalCharts)
 	s.db.Model(&models.User{}).Count(&totalUsers)
-
-	// Use database's current date for todayQueries
-	s.db.Model(&models.Query{}).Where("DATE(created_at) = CURRENT_DATE").Count(&todayQueries)
+	s.db.Model(&models.Query{}).Where("DATE(created_at) = ?", today).Count(&todayQueries)
 
 	// 查询趋势（最近7天每天的查询数）
 	queryTrends := []map[string]interface{}{}

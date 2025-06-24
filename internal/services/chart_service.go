@@ -136,6 +136,7 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"heatmap":    true,
 		"gauge":      true,
 		"funnel":     true,
+		"area":       true,
 		"3d-bar":     true,
 		"3d-scatter": true,
 		"3d-surface": true,
