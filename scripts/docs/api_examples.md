@@ -14,6 +14,8 @@
 - [3D散点图 (3D Scatter Chart)](#3d散点图-3d-scatter-chart)
 - [3D表面图 (3D Surface Chart)](#3d表面图-3d-surface-chart)
 - [3D气泡图 (3D Bubble Chart)](#3d气泡图-3d-bubble-chart)
+- [树状图 (TreeMap)](#树状图-treemap)
+- [旭日图 (Sunburst)](#旭日图-sunburst)
 
 ## 🔐 认证
 
@@ -853,6 +855,136 @@ curl -X POST "http://localhost:8080/api/charts" \
     "type": "3d-bubble",
     "config": "{\"xField\":\"x\",\"yField\":\"y\",\"zField\":\"z\",\"sizeField\":\"size\",\"colorField\":\"category\",\"title\":\"3D城市数据\",\"legend\":true,\"color\":[\"#1890ff\",\"#2fc25b\",\"#facc14\",\"#f5222d\"],\"tooltip\":true,\"grid3D\":{\"boxWidth\":100,\"boxHeight\":100,\"boxDepth\":100,\"viewControl\":{\"alpha\":20,\"beta\":40,\"distance\":200}}}",
     "description": "3D展示城市GDP、人口和面积关系",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+---
+
+## 🌳 树状图 (TreeMap)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "层级数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含层级结构数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "部门层级查询",
+    "dataSourceId": 10,
+    "sql": "SELECT id, parent_id, name, value, category FROM department_hierarchy",
+    "description": "查询公司部门层级结构"
+  }'
+```
+
+### 3. 创建树状图
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "公司部门树状图",
+    "queryId": 11,
+    "type": "treemap",
+    "config": "{\"dataField\":\"name\",\"valueField\":\"value\",\"colorField\":\"category\",\"title\":\"公司部门分布\",\"legend\":true,\"tooltip\":true}",
+    "description": "展示公司各部门及其层级结构"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 11,
+    "name": "公司部门树状图",
+    "queryId": 11,
+    "type": "treemap",
+    "config": "{\"dataField\":\"name\",\"valueField\":\"value\",\"colorField\":\"category\",\"title\":\"公司部门分布\",\"legend\":true,\"tooltip\":true}",
+    "description": "展示公司各部门及其层级结构",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+---
+
+## ☀️ 旭日图 (Sunburst)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品层级数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含产品层级数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品分类层级查询",
+    "dataSourceId": 12,
+    "sql": "SELECT id, parent_id, name, value, category FROM product_hierarchy",
+    "description": "查询产品分类层级结构"
+  }'
+```
+
+### 3. 创建旭日图
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品分类旭日图",
+    "queryId": 13,
+    "type": "sunburst",
+    "config": "{\"dataField\":\"name\",\"valueField\":\"value\",\"colorField\":\"category\",\"title\":\"产品分类层级分布\",\"legend\":true,\"tooltip\":true}",
+    "description": "展示产品分类的层级结构"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 13,
+    "name": "产品分类旭日图",
+    "queryId": 13,
+    "type": "sunburst",
+    "config": "{\"dataField\":\"name\",\"valueField\":\"value\",\"colorField\":\"category\",\"title\":\"产品分类层级分布\",\"legend\":true,\"tooltip\":true}",
+    "description": "展示产品分类的层级结构",
     "userID": 1,
     "createdAt": "2025-06-24T11:50:00Z",
     "updatedAt": "2025-06-24T11:50:00Z"
