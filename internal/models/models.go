@@ -34,7 +34,7 @@ type Query struct {
 	gorm.Model
 	UserID       uint
 	User         User
-	DataSourceID uint
+	DataSourceID uint `json:"data_source_id"`
 	DataSource   DataSource
 	Name         string
 	SQL          string
