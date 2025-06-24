@@ -135,6 +135,7 @@ POST /webhooks/reports
 | Line Charts | ✅ | ❌ | ✅ |
 | Pie Charts | ✅ | ❌ | ✅ |
 | Scatter Plots | ✅ | ✅ | ✅ |
+| Area Charts | ✅ | ❌ | ✅ |
 | Surface Charts | ❌ | ✅ | ✅ |
 | Heat Maps | ✅ | ❌ | ✅ |
 | Gauge Charts | ✅ | ❌ | ✅ |
@@ -267,6 +268,7 @@ Supported chart types:
 - Heat maps
 - Gauge charts
 - Funnel charts
+- Area charts
 - 3D Bar charts
 - 3D Scatter plots
 - 3D Surface charts

@@ -346,6 +346,7 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"heatmap":    true,
 		"gauge":      true,
 		"funnel":     true,
+		"area":       true, // 面积图 - 显示数据趋势和变化量
 		"3d-bar":     true,
 		"3d-scatter": true,
 		"3d-surface": true,
