@@ -42,6 +42,7 @@ func main() {
 
 	h := handlers.NewHandler(db)
 	reportHandler := handlers.NewReportHandler(db)
+	webhookHandler := handlers.NewWebhookHandler(db)
 
 	r := gin.New()
 
@@ -93,6 +94,15 @@ func main() {
 		authorized.POST("/apikeys", h.CreateAPIKey)
 		authorized.GET("/apikeys", h.ListAPIKeys)
 		authorized.DELETE("/apikeys/:id", h.RevokeAPIKey)
+
+		// Webhook management
+		authorized.POST("/webhooks", webhookHandler.CreateWebhook)
+		authorized.GET("/webhooks", webhookHandler.ListWebhooks)
+		authorized.GET("/webhooks/:id", webhookHandler.GetWebhook)
+		authorized.PUT("/webhooks/:id", webhookHandler.UpdateWebhook)
+		authorized.DELETE("/webhooks/:id", webhookHandler.DeleteWebhook)
+		authorized.GET("/webhooks/:id/deliveries", webhookHandler.ListWebhookDeliveries)
+		authorized.POST("/webhooks/:id/test", webhookHandler.TestWebhook)
 
 		// Query routes
 		authorized.POST("/queries", h.CreateQuery)

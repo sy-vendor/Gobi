@@ -11,6 +11,7 @@
 - Excel 模板管理和导出
 - 用户认证和授权
 - **API Key 支持，用于服务间认证**
+- **Webhook/回调机制，用于事件通知**
 - 用户数据隔离
 - 仪表盘统计和分析
 - **定时报告生成**
@@ -70,6 +71,15 @@ default:
 - POST /api/apikeys - 创建新的 API Key
 - GET /api/apikeys - 列出所有 API Key（用户自己的或管理员可查看所有）
 - DELETE /api/apikeys/:id - 吊销 API Key
+
+### Webhook 管理
+- POST /api/webhooks - 创建新的 Webhook
+- GET /api/webhooks - 列出所有 Webhook（用户自己的或管理员可查看所有）
+- GET /api/webhooks/:id - 获取特定 Webhook
+- PUT /api/webhooks/:id - 更新 Webhook
+- DELETE /api/webhooks/:id - 删除 Webhook
+- GET /api/webhooks/:id/deliveries - 列出 Webhook 发送记录
+- POST /api/webhooks/:id/test - 测试 Webhook
 
 ### 仪表盘
 - GET /api/dashboard/stats - 获取仪表盘统计信息
@@ -198,6 +208,33 @@ curl -X DELETE http://localhost:8080/api/apikeys/1 \
   -H "Authorization: Bearer <your_jwt_token>"
 ```
 
+### 创建 Webhook
+```bash
+curl -X POST http://localhost:8080/api/webhooks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_jwt_token>" \
+  -d '{
+    "name": "报告通知",
+    "url": "https://your-app.com/webhooks/reports",
+    "events": ["report.generated", "report.failed"],
+    "headers": {
+      "X-Custom-Header": "custom-value"
+    }
+  }'
+```
+
+### 测试 Webhook
+```bash
+curl -X POST http://localhost:8080/api/webhooks/1/test \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
+### 列出 Webhook 发送记录
+```bash
+curl -X GET http://localhost:8080/api/webhooks/1/deliveries \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
 ### 创建定时报告
 ```bash
 curl -X POST http://localhost:8080/api/reports/schedules \
@@ -211,6 +248,60 @@ curl -X POST http://localhost:8080/api/reports/schedules \
     "template_ids": [1],
     "cron_pattern": "35 16 * * *"
   }'
+```
+
+---
+
+## Webhook 事件
+
+### 支持的事件
+
+- `report.generated` — 报告生成成功
+- `report.failed` — 报告生成失败
+- `webhook.test` — Webhook 测试事件
+
+### 事件数据格式
+
+```json
+{
+  "event": "report.generated",
+  "data": {
+    "report_id": 123,
+    "report_name": "每日销售报告",
+    "schedule_id": 456,
+    "schedule_name": "每日销售计划",
+    "status": "success",
+    "generated_at": "2024-01-15T10:30:00Z",
+    "file_size": 1024,
+    "download_url": "/api/reports/123/download"
+  }
+}
+```
+
+### Webhook 安全
+
+- **签名验证**: 每个 webhook 都包含 HMAC-SHA256 签名
+- **请求头**: 
+  - `X-Gobi-Signature`: HMAC 签名
+  - `X-Gobi-Timestamp`: Unix 时间戳
+  - `X-Gobi-Event`: 事件类型
+- **重试机制**: 自动重试，指数退避（3次尝试）
+- **发送记录**: 所有发送尝试都会被记录
+
+### 签名验证
+
+```python
+import hmac
+import hashlib
+
+def verify_signature(payload, signature, timestamp, secret):
+    message = f"{timestamp}.{payload}"
+    expected = hmac.new(
+        secret.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
 ```
 
 ---
@@ -262,7 +353,9 @@ curl -X POST http://localhost:8080/api/reports/schedules \
 
 - 所有接口都需要 JWT 认证
 - **API Key 认证用于服务间通信**
+- **Webhook 签名验证确保通知安全**
 - 使用 bcrypt 加密密码
 - **API Key 使用 bcrypt 哈希**
 - 用户数据隔离
-- **安全的随机密钥生成** 
+- **安全的随机密钥生成**
+- **自动 Webhook 重试，指数退避** 

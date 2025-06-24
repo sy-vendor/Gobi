@@ -19,6 +19,7 @@ A minimal viable product (MVP) for a Business Intelligence engine built with Go.
 - Excel template management and export
 - User authentication and authorization
 - **API key support for service-to-service authentication**
+- **Webhook/回调机制 for event notifications**
 - Data isolation between users
 - Dashboard statistics and analytics
 - Scheduled report generation
@@ -86,6 +87,15 @@ default:
 - `POST /api/apikeys` — Create a new API key
 - `GET /api/apikeys` — List all API keys (user's own or all for admin)
 - `DELETE /api/apikeys/:id` — Revoke an API key
+
+### Webhook Management
+- `POST /api/webhooks` — Create a new webhook
+- `GET /api/webhooks` — List all webhooks (user's own or all for admin)
+- `GET /api/webhooks/:id` — Get a specific webhook
+- `PUT /api/webhooks/:id` — Update a webhook
+- `DELETE /api/webhooks/:id` — Delete a webhook
+- `GET /api/webhooks/:id/deliveries` — List webhook delivery attempts
+- `POST /api/webhooks/:id/test` — Test a webhook
 
 ### Dashboard
 - `GET /api/dashboard/stats` — Get dashboard statistics
@@ -227,6 +237,36 @@ curl -X DELETE http://localhost:8080/api/apikeys/1 \
   -H "Authorization: Bearer <your_jwt_token>"
 ```
 
+### Create Webhook
+
+```bash
+curl -X POST http://localhost:8080/api/webhooks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your_jwt_token>" \
+  -d '{
+    "name": "Report Notifications",
+    "url": "https://your-app.com/webhooks/reports",
+    "events": ["report.generated", "report.failed"],
+    "headers": {
+      "X-Custom-Header": "custom-value"
+    }
+  }'
+```
+
+### Test Webhook
+
+```bash
+curl -X POST http://localhost:8080/api/webhooks/1/test \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
+### List Webhook Deliveries
+
+```bash
+curl -X GET http://localhost:8080/api/webhooks/1/deliveries \
+  -H "Authorization: Bearer <your_jwt_token>"
+```
+
 ### Create Report Schedule
 
 ```bash
@@ -241,6 +281,60 @@ curl -X POST http://localhost:8080/api/reports/schedules \
     "template_ids": [1],
     "cron_pattern": "35 16 * * *"
   }'
+```
+
+---
+
+## Webhook Events
+
+### Supported Events
+
+- `report.generated` — Report generation completed successfully
+- `report.failed` — Report generation failed
+- `webhook.test` — Test webhook event
+
+### Event Payload Format
+
+```json
+{
+  "event": "report.generated",
+  "data": {
+    "report_id": 123,
+    "report_name": "Daily Sales Report",
+    "schedule_id": 456,
+    "schedule_name": "Daily Sales Schedule",
+    "status": "success",
+    "generated_at": "2024-01-15T10:30:00Z",
+    "file_size": 1024,
+    "download_url": "/api/reports/123/download"
+  }
+}
+```
+
+### Webhook Security
+
+- **Signature Verification**: Each webhook includes an HMAC-SHA256 signature
+- **Headers**: 
+  - `X-Gobi-Signature`: HMAC signature
+  - `X-Gobi-Timestamp`: Unix timestamp
+  - `X-Gobi-Event`: Event type
+- **Retry Logic**: Automatic retry with exponential backoff (3 attempts)
+- **Delivery Tracking**: All delivery attempts are logged
+
+### Signature Verification
+
+```python
+import hmac
+import hashlib
+
+def verify_signature(payload, signature, timestamp, secret):
+    message = f"{timestamp}.{payload}"
+    expected = hmac.new(
+        secret.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
 ```
 
 ---
@@ -295,10 +389,12 @@ All API errors are returned in JSON format:
 
 - JWT authentication for all endpoints
 - **API key authentication for service-to-service communication**
+- **Webhook signature verification for secure notifications**
 - Password hashing with bcrypt
 - **API key hashing with bcrypt**
 - User data isolation
 - **Secure random key generation**
+- **Automatic webhook retry with exponential backoff**
 
 ---
 

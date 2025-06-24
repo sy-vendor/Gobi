@@ -109,3 +109,33 @@ type APIKey struct {
 	ExpiresAt *time.Time `json:"expires_at"`
 	Revoked   bool       `gorm:"default:false" json:"revoked"`
 }
+
+// Webhook represents a webhook configuration for event notifications
+// Supports multiple event types and custom headers
+type Webhook struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    uint      `gorm:"index" json:"user_id"`
+	User      User      `gorm:"constraint:OnDelete:CASCADE"`
+	Name      string    `gorm:"type:varchar(64)" json:"name"`
+	URL       string    `gorm:"type:varchar(512)" json:"url"`
+	Events    string    `gorm:"type:text" json:"events"`    // JSON array of event types
+	Headers   string    `gorm:"type:text" json:"headers"`   // JSON object of custom headers
+	Secret    string    `gorm:"type:varchar(128)" json:"-"` // for signature verification
+	Active    bool      `gorm:"default:true" json:"active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// WebhookDelivery represents a webhook delivery attempt
+type WebhookDelivery struct {
+	ID        uint       `gorm:"primaryKey" json:"id"`
+	WebhookID uint       `gorm:"index" json:"webhook_id"`
+	Webhook   Webhook    `gorm:"constraint:OnDelete:CASCADE"`
+	Event     string     `gorm:"type:varchar(64)" json:"event"`
+	Payload   string     `gorm:"type:text" json:"payload"`       // JSON payload sent
+	Status    string     `gorm:"type:varchar(32)" json:"status"` // success, failed, pending
+	Response  string     `gorm:"type:text" json:"response"`      // response from webhook URL
+	Attempts  int        `gorm:"default:0" json:"attempts"`
+	CreatedAt time.Time  `json:"created_at"`
+	SentAt    *time.Time `json:"sent_at"`
+}
