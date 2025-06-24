@@ -20,6 +20,10 @@ if ! command -v sqlite3 &> /dev/null; then
     exit 1
 fi
 
+# 获取脚本所在目录的上级目录（项目根目录）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+
 # 创建测试数据库
 TEST_DB="test_area_charts.db"
 echo "1. Creating test database: $TEST_DB"
@@ -32,7 +36,7 @@ fi
 
 # 执行SQL脚本
 echo "2. Executing SQL script..."
-if sqlite3 "$TEST_DB" < ../data/generate_area_chart_data.sql; then
+if sqlite3 "$TEST_DB" < "$PROJECT_ROOT/scripts/data/generate_area_chart_data.sql"; then
     echo -e "${GREEN}   ✓ SQL script executed successfully${NC}"
 else
     echo -e "${RED}   ✗ Failed to execute SQL script${NC}"
@@ -143,3 +147,4 @@ echo "1. Copy the SQL from scripts/data/generate_area_chart_data.sql"
 echo "2. Execute it in your database"
 echo "3. Use the sample queries in Gobi to create area charts"
 echo
+echo "For detailed usage instructions, see: docs/area_chart_guide.md"

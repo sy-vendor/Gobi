@@ -56,7 +56,7 @@ print_subtitle() {
 # 检查服务器是否运行
 check_server() {
     print_title "检查服务器状态"
-    if curl -s "$BASE_URL/../healthz" > /dev/null; then
+    if curl -s "$BASE_URL/healthz" > /dev/null; then
         print_status 0 "服务器运行正常"
     else
         print_status 1 "服务器未运行" "请先启动服务器: go run cmd/server/main.go"
