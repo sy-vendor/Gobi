@@ -6,6 +6,9 @@ import (
 	"gobi/pkg/utils"
 	"time"
 
+	"crypto/rand"
+	"encoding/base64"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -139,4 +142,83 @@ func (s *UserService) ResetPassword(userID uint, newPassword string) error {
 	}
 	user.Password = string(hashed)
 	return s.db.Save(&user).Error
+}
+
+// CreateAPIKey creates a new API key for a user and returns the plain key (only once)
+func (s *UserService) CreateAPIKey(userID uint, name string, expiresAt *time.Time) (string, *models.APIKey, error) {
+	// Generate random key (32 bytes, base64 encoded)
+	keyBytes := make([]byte, 32)
+	if _, err := rand.Read(keyBytes); err != nil {
+		return "", nil, errors.WrapError(err, "Failed to generate API key")
+	}
+	plainKey := base64.RawURLEncoding.EncodeToString(keyBytes)
+	prefix := plainKey[:12]
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(plainKey), bcrypt.DefaultCost)
+	if err != nil {
+		return "", nil, errors.WrapError(err, "Failed to hash API key")
+	}
+
+	apiKey := &models.APIKey{
+		UserID:    userID,
+		Name:      name,
+		KeyHash:   string(hash),
+		Prefix:    prefix,
+		CreatedAt: time.Now(),
+		ExpiresAt: expiresAt,
+		Revoked:   false,
+	}
+	if err := s.db.Create(apiKey).Error; err != nil {
+		return "", nil, errors.WrapError(err, "Could not save API key")
+	}
+	return plainKey, apiKey, nil
+}
+
+// ListAPIKeys lists all API keys for a user (admin can list all)
+func (s *UserService) ListAPIKeys(userID uint, isAdmin bool) ([]models.APIKey, error) {
+	var keys []models.APIKey
+	query := s.db
+	if !isAdmin {
+		query = query.Where("user_id = ?", userID)
+	}
+	if err := query.Find(&keys).Error; err != nil {
+		return nil, errors.WrapError(err, "Could not list API keys")
+	}
+	return keys, nil
+}
+
+// RevokeAPIKey revokes an API key by ID (user or admin)
+func (s *UserService) RevokeAPIKey(keyID uint, userID uint, isAdmin bool) error {
+	var key models.APIKey
+	if err := s.db.First(&key, keyID).Error; err != nil {
+		return errors.ErrNotFound
+	}
+	if !isAdmin && key.UserID != userID {
+		return errors.ErrForbidden
+	}
+	key.Revoked = true
+	return s.db.Save(&key).Error
+}
+
+// GetAPIKeyByPrefix finds an API key by prefix (for auth middleware)
+func (s *UserService) GetAPIKeyByPrefix(prefix string) (*models.APIKey, error) {
+	var key models.APIKey
+	if err := s.db.Where("prefix = ? AND revoked = ?", prefix, false).First(&key).Error; err != nil {
+		return nil, errors.ErrNotFound
+	}
+	return &key, nil
+}
+
+// ValidateAPIKey checks if the provided key matches the hash and is not expired/revoked
+func (s *UserService) ValidateAPIKey(apiKey *models.APIKey, plainKey string) bool {
+	if apiKey.Revoked {
+		return false
+	}
+	if apiKey.ExpiresAt != nil && apiKey.ExpiresAt.Before(time.Now()) {
+		return false
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(apiKey.KeyHash), []byte(plainKey)); err != nil {
+		return false
+	}
+	return true
 }

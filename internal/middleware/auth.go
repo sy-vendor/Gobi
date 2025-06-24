@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"strings"
 
+	"gobi/internal/services"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -19,6 +21,29 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		if strings.HasPrefix(authHeader, "ApiKey ") {
+			// API Key authentication
+			plainKey := strings.TrimPrefix(authHeader, "ApiKey ")
+			if len(plainKey) < 12 {
+				c.Error(errors.NewError(http.StatusUnauthorized, "Invalid API key format", nil))
+				c.Abort()
+				return
+			}
+			prefix := plainKey[:12]
+			apiKey, err := userService.GetAPIKeyByPrefix(prefix)
+			if err != nil || !userService.ValidateAPIKey(apiKey, plainKey) {
+				c.Error(errors.NewError(http.StatusUnauthorized, "Invalid or expired API key", nil))
+				c.Abort()
+				return
+			}
+			// Set userID and role from API key owner
+			c.Set("userID", apiKey.UserID)
+			c.Set("role", "service") // or apiKey.User.Role if you want to inherit
+			c.Next()
+			return
+		}
+
+		// JWT authentication (default)
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.Error(errors.NewError(http.StatusUnauthorized, "Invalid authorization header format", nil))

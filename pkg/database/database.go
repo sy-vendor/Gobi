@@ -38,6 +38,7 @@ func InitDB(cfg *config.Config) error {
 		&models.ExcelTemplate{},
 		&models.Report{},
 		&models.ReportSchedule{},
+		&models.APIKey{},
 	)
 	if err != nil {
 		return err
