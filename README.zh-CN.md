@@ -1,41 +1,171 @@
-# Gobi - BI 引擎最小可行产品
+# Gobi - 现代 Go 原生商业智能引擎
 
 [English](./README.md)
 
-一个使用 Go 语言构建的商业智能引擎最小可行产品。
+🚀 **一个轻量级、API优先的商业智能引擎，使用 Go 构建** - 专为需要嵌入式分析、自动化报告和实时数据可视化的现代应用程序而设计。
 
-## 功能特性
+## ✨ 为什么选择 Gobi？
 
-- SQL 查询管理和执行
-- 交互式图表可视化
-- Excel 模板管理和导出
-- 用户认证和授权
-- **API Key 支持，用于服务间认证**
-- **Webhook/回调机制，用于事件通知**
-- 用户数据隔离
-- 仪表盘统计和分析
-- **定时报告生成**
-- **增强的JWT配置**
-- **改进的错误处理**
+- **🔧 Go 原生**: 完全使用 Go 构建，性能优异、简单易用、部署便捷
+- **🔌 API 优先**: 提供 RESTful API，支持 JWT 和 API Key 认证，无缝集成
+- **📊 多图表支持**: 从基础图表到高级 3D 可视化
+- **🤖 自动化就绪**: 支持定时报告和 Webhook 通知
+- **🔐 企业级安全**: 多用户隔离、API Key 管理、Webhook 签名验证
+- **📈 生产就绪**: 服务层架构、全面的错误处理和日志记录
 
-## 环境要求
+## 🎯 完美适用于
+
+- **SaaS 应用程序** 需要嵌入式分析功能
+- **微服务** 需要轻量级 BI 能力
+- **内部工具** 用于数据可视化和报告
+- **API 优先平台** 需要无头 BI 功能
+- **Go 应用程序** 寻找原生 BI 集成
+
+[![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://go.dev/dl/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://github.com/sy-vendor/gobi/actions/workflows/go.yml/badge.svg)](https://github.com/sy-vendor/gobi/actions/workflows/go.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sy-vendor/gobi)](https://goreportcard.com/report/github.com/sy-vendor/gobi)
+[![GitHub stars](https://img.shields.io/github/stars/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/stargazers)
+[![API-First](https://img.shields.io/badge/API--First-Design-blueviolet)](https://github.com/sy-vendor/gobi)
+[![3D Charts](https://img.shields.io/badge/3D--Charts-Supported-orange)](https://github.com/sy-vendor/gobi)
+
+---
+
+## 🚀 核心功能
+
+### 🔌 **API 优先架构**
+- 提供全面的 CRUD 操作的 RESTful API
+- **API Key 认证** 用于服务间通信
+- **Webhook 系统** 带签名验证的实时通知
+- 统一的 JSON 响应格式和适当的错误处理
+
+### 📊 **高级可视化**
+- **12+ 图表类型**: 柱状图、折线图、饼图、散点图、雷达图、热力图、仪表盘、漏斗图
+- **3D 图表**: 3D 柱状图、3D 散点图、3D 曲面图、3D 气泡图
+- 交互式图表配置和自定义
+- Excel 模板集成，生成专业报告
+
+### 🤖 **自动化和调度**
+- **基于 Cron 的调度** 用于自动化报告生成
+- **Webhook 通知** 用于报告完成事件
+- **重试逻辑** 带指数退避的失败重试
+- **发送跟踪** 带详细日志记录
+
+### 🔐 **企业级安全**
+- **JWT 认证** 带可配置过期时间
+- **API Key 管理** 带安全生成和吊销功能
+- **多用户隔离** 确保数据隐私
+- **Webhook 签名验证** 用于安全通知
+- **基于角色的访问控制** (管理员/用户角色)
+
+### 🏗️ **现代架构**
+- **服务层模式** 用于清晰的关注点分离
+- **依赖注入** 用于改进的可测试性
+- **数据库连接池** 用于最佳性能
+- **全面的错误处理** 带详细日志记录
+- **配置管理** 支持 YAML
+
+### 📈 **数据管理**
+- **多数据库支持** (SQLite、MySQL、PostgreSQL)
+- **SQL 查询管理** 带执行跟踪
+- **数据源管理** 用于集中连接处理
+- **查询缓存** 用于改进性能
+- **仪表盘统计** 和分析
+
+---
+
+## 🎯 使用场景
+
+### **嵌入式分析**
+```go
+// 将 BI 直接集成到您的 Go 应用程序中
+client := gobi.NewClient("https://your-gobi-instance.com")
+client.SetAPIKey("your-api-key")
+
+// 以编程方式创建图表
+chart := &gobi.Chart{
+    Name: "销售分析",
+    Type: "3d_surface",
+    Data: salesData,
+}
+```
+
+### **自动化报告**
+```yaml
+# 使用 Webhook 通知调度每日报告
+schedule:
+  name: "每日销售报告"
+  cron: "0 9 * * *"  # 每天上午 9 点
+  webhook: "https://your-app.com/webhooks/reports"
+```
+
+### **API 优先集成**
+```bash
+# 服务间认证
+curl -H "Authorization: ApiKey your-api-key" \
+     https://gobi.example.com/api/charts
+
+# 实时 Webhook 通知
+POST /webhooks/reports
+{
+  "event": "report.generated",
+  "data": { "report_id": 123, "status": "success" }
+}
+```
+
+---
+
+## 🛠️ 技术栈
+
+- **后端**: Go 1.21+ 与 Gin 框架
+- **数据库**: SQLite (开发) / MySQL/PostgreSQL (生产)
+- **认证**: JWT + API Keys，带 bcrypt 哈希
+- **图表**: 自定义 3D 渲染，支持 WebGL
+- **调度**: 基于 Cron，支持时区
+- **通知**: Webhook 系统，带 HMAC 签名
+- **文档**: 支持 OpenAPI/Swagger
+
+---
+
+## 📊 图表展示
+
+| 图表类型 | 2D | 3D | 交互式 |
+|------------|----|----|-------------|
+| 柱状图 | ✅ | ✅ | ✅ |
+| 折线图 | ✅ | ❌ | ✅ |
+| 饼图 | ✅ | ❌ | ✅ |
+| 散点图 | ✅ | ✅ | ✅ |
+| 曲面图 | ❌ | ✅ | ✅ |
+| 热力图 | ✅ | ❌ | ✅ |
+| 仪表盘 | ✅ | ❌ | ✅ |
+| 漏斗图 | ✅ | ❌ | ✅ |
+
+---
+
+## 🔧 环境要求
 
 - Go 1.21 或更高版本
 - SQLite（用于开发）
-- MySQL/PostgreSQL（可选）
+- MySQL/PostgreSQL（用于生产）
 
-## 快速开始
+---
+
+## ⚡ 快速开始
 
 ```bash
+# 克隆并运行
 git clone https://github.com/sy-vendor/gobi.git
 cd gobi
 go mod download
 go run cmd/server/main.go
+
+# 服务器在 http://localhost:8080 启动
+# 默认管理员: admin/admin123
 ```
 
-服务器默认在 8080 端口启动。
+---
 
-## 配置
+## 📋 配置
 
 ### 配置文件
 
@@ -47,82 +177,86 @@ default:
     port: "8080"
   jwt:
     secret: "default_jwt_secret"
-    expiration_hours: 168  # 7天
+    expiration_hours: 168
   database:
     type: "sqlite"
     dsn: "gobi.db"
 ```
 
-### JWT配置
+### JWT 配置
 
-- `jwt.secret`: JWT签名密钥
-- `jwt.expiration_hours`: Token过期时间（小时）
-  - 168小时 = 7天
-  - 720小时 = 30天
-  - 2160小时 = 90天
+- `jwt.secret`: JWT 签名密钥
+- `jwt.expiration_hours`: Token 过期时间（小时）
+  - 168 = 7 天
+  - 720 = 30 天
+  - 2160 = 90 天
 
-## API 接口
+---
+
+## 🔌 API 接口
 
 ### 认证
-- POST /api/auth/register - 注册新用户
-- POST /api/auth/login - 登录并获取 JWT 令牌
+- `POST /api/auth/register` — 注册新用户
+- `POST /api/auth/login` — 登录并获取 JWT 令牌
 
 ### API Key 管理
-- POST /api/apikeys - 创建新的 API Key
-- GET /api/apikeys - 列出所有 API Key（用户自己的或管理员可查看所有）
-- DELETE /api/apikeys/:id - 吊销 API Key
+- `POST /api/apikeys` — 创建新的 API Key
+- `GET /api/apikeys` — 列出所有 API Key（用户自己的或管理员可查看所有）
+- `DELETE /api/apikeys/:id` — 吊销 API Key
 
 ### Webhook 管理
-- POST /api/webhooks - 创建新的 Webhook
-- GET /api/webhooks - 列出所有 Webhook（用户自己的或管理员可查看所有）
-- GET /api/webhooks/:id - 获取特定 Webhook
-- PUT /api/webhooks/:id - 更新 Webhook
-- DELETE /api/webhooks/:id - 删除 Webhook
-- GET /api/webhooks/:id/deliveries - 列出 Webhook 发送记录
-- POST /api/webhooks/:id/test - 测试 Webhook
+- `POST /api/webhooks` — 创建新的 Webhook
+- `GET /api/webhooks` — 列出所有 Webhook（用户自己的或管理员可查看所有）
+- `GET /api/webhooks/:id` — 获取特定 Webhook
+- `PUT /api/webhooks/:id` — 更新 Webhook
+- `DELETE /api/webhooks/:id` — 删除 Webhook
+- `GET /api/webhooks/:id/deliveries` — 列出 Webhook 发送记录
+- `POST /api/webhooks/:id/test` — 测试 Webhook
 
 ### 仪表盘
-- GET /api/dashboard/stats - 获取仪表盘统计信息
+- `GET /api/dashboard/stats` — 获取仪表盘统计信息
 
 ### 数据源
-- POST /api/datasources - 创建新数据源
-- GET /api/datasources - 列出所有数据源
-- GET /api/datasources/:id - 获取特定数据源
-- PUT /api/datasources/:id - 更新数据源
-- DELETE /api/datasources/:id - 删除数据源
+- `POST /api/datasources` — 创建新数据源
+- `GET /api/datasources` — 列出所有数据源
+- `GET /api/datasources/:id` — 获取特定数据源
+- `PUT /api/datasources/:id` — 更新数据源
+- `DELETE /api/datasources/:id` — 删除数据源
 
 ### 查询
-- POST /api/queries - 创建新查询
-- GET /api/queries - 列出所有查询
-- GET /api/queries/:id - 获取特定查询
-- PUT /api/queries/:id - 更新查询
-- DELETE /api/queries/:id - 删除查询
-- POST /api/queries/:id/execute - 执行查询
+- `POST /api/queries` — 创建新查询
+- `GET /api/queries` — 列出所有查询
+- `GET /api/queries/:id` — 获取特定查询
+- `PUT /api/queries/:id` — 更新查询
+- `DELETE /api/queries/:id` — 删除查询
+- `POST /api/queries/:id/execute` — 执行查询
 
 ### 图表
-- POST /api/charts - 创建新图表
-- GET /api/charts - 列出所有图表
-- GET /api/charts/:id - 获取特定图表
-- PUT /api/charts/:id - 更新图表
-- DELETE /api/charts/:id - 删除图表
+- `POST /api/charts` — 创建新图表
+- `GET /api/charts` — 列出所有图表
+- `GET /api/charts/:id` — 获取特定图表
+- `PUT /api/charts/:id` — 更新图表
+- `DELETE /api/charts/:id` — 删除图表
 
 ### Excel 模板
-- POST /api/templates - 上传新模板
-- GET /api/templates - 列出所有模板
-- GET /api/templates/:id/download - 下载模板
+- `POST /api/templates` — 上传新模板
+- `GET /api/templates` — 列出所有模板
+- `GET /api/templates/:id/download` — 下载模板
 
 ### 定时报告
-- POST /api/reports/schedules - 创建新的定时报告
-- GET /api/reports/schedules - 列出所有定时报告
-- GET /api/reports/schedules/:id - 获取特定定时报告
-- PUT /api/reports/schedules/:id - 更新定时报告
-- DELETE /api/reports/schedules/:id - 删除定时报告
+- `POST /api/reports/schedules` — 创建新的定时报告
+- `GET /api/reports/schedules` — 列出所有定时报告
+- `GET /api/reports/schedules/:id` — 获取特定定时报告
+- `PUT /api/reports/schedules/:id` — 更新定时报告
+- `DELETE /api/reports/schedules/:id` — 删除定时报告
 
 ### 报告
-- GET /api/reports - 列出所有生成的报告
-- GET /api/reports/:id/download - 下载特定报告
+- `GET /api/reports` — 列出所有生成的报告
+- `GET /api/reports/:id/download` — 下载特定报告
 
-## 图表类型
+---
+
+## 📊 图表类型
 
 支持的图表类型：
 - 柱状图
@@ -133,14 +267,17 @@ default:
 - 热力图
 - 仪表盘
 - 漏斗图
-- **3D柱状图**
-- **3D散点图**
-- **3D曲面图**
-- **3D气泡图**
+- 3D 柱状图
+- 3D 散点图
+- 3D 曲面图
+- 3D 气泡图
 
-## Cron表达式指南
+---
+
+## ⏰ Cron 表达式指南
 
 ### 基本格式
+
 ```
 * * * * *
 │ │ │ │ │
@@ -152,13 +289,17 @@ default:
 ```
 
 ### 常见示例
-- `0 9 * * *` - 每天上午9点
-- `0 0 * * 1` - 每周一午夜
-- `35 16 * * *` - 每天下午4点35分
 
-## API 使用示例
+- `0 9 * * *` — 每天上午 9 点
+- `0 0 * * 1` — 每周一午夜
+- `35 16 * * *` — 每天下午 4 点 35 分
+
+---
+
+## 🔌 API 使用示例
 
 ### 登录
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -169,6 +310,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 ### 创建 API Key
+
 ```bash
 curl -X POST http://localhost:8080/api/apikeys \
   -H "Content-Type: application/json" \

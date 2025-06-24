@@ -1,55 +1,171 @@
-# Gobi - BI Engine MVP
+# Gobi - Modern Go-Native Business Intelligence Engine
 
 [简体中文](./README.zh-CN.md)
 
-A minimal viable product (MVP) for a Business Intelligence engine built with Go.
+🚀 **A lightweight, API-first Business Intelligence engine built with Go** - designed for modern applications that need embedded analytics, automated reporting, and real-time data visualization.
+
+## ✨ Why Gobi?
+
+- **🔧 Go-Native**: Built entirely in Go for performance, simplicity, and easy deployment
+- **🔌 API-First**: RESTful APIs with JWT and API key authentication for seamless integration
+- **📊 Multi-Chart Support**: From basic charts to advanced 3D visualizations
+- **🤖 Automation Ready**: Scheduled reports with webhook notifications
+- **🔐 Enterprise Security**: Multi-user isolation, API key management, and webhook signatures
+- **📈 Production Ready**: Service layer architecture, comprehensive error handling, and logging
+
+## 🎯 Perfect For
+
+- **SaaS Applications** needing embedded analytics
+- **Microservices** requiring lightweight BI capabilities
+- **Internal Tools** for data visualization and reporting
+- **API-First Platforms** that need headless BI functionality
+- **Go Applications** looking for native BI integration
 
 [![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://github.com/sy-vendor/gobi/actions/workflows/go.yml/badge.svg)](https://github.com/sy-vendor/gobi/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sy-vendor/gobi)](https://goreportcard.com/report/github.com/sy-vendor/gobi)
 [![GitHub stars](https://img.shields.io/github/stars/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/stargazers)
+[![API-First](https://img.shields.io/badge/API--First-Design-blueviolet)](https://github.com/sy-vendor/gobi)
+[![3D Charts](https://img.shields.io/badge/3D--Charts-Supported-orange)](https://github.com/sy-vendor/gobi)
 
 ---
 
-## Features
+## 🚀 Key Features
 
-- SQL query management and execution
-- Interactive chart visualization
-- Excel template management and export
-- User authentication and authorization
-- **API key support for service-to-service authentication**
-- **Webhook/回调机制 for event notifications**
-- Data isolation between users
-- Dashboard statistics and analytics
-- Scheduled report generation
-- Enhanced JWT configuration
-- Improved error handling
+### 🔌 **API-First Architecture**
+- RESTful APIs with comprehensive CRUD operations
+- **API Key authentication** for service-to-service communication
+- **Webhook system** with signature verification for real-time notifications
+- Unified JSON response format with proper error handling
+
+### 📊 **Advanced Visualization**
+- **12+ Chart Types**: Bar, Line, Pie, Scatter, Radar, Heatmap, Gauge, Funnel
+- **3D Charts**: 3D Bar, 3D Scatter, 3D Surface, 3D Bubble charts
+- Interactive chart configuration and customization
+- Excel template integration for professional reports
+
+### 🤖 **Automation & Scheduling**
+- **Cron-based scheduling** for automated report generation
+- **Webhook notifications** for report completion events
+- **Retry logic** with exponential backoff for failed deliveries
+- **Delivery tracking** with detailed logs
+
+### 🔐 **Enterprise Security**
+- **JWT authentication** with configurable expiration
+- **API key management** with secure generation and revocation
+- **Multi-user isolation** ensuring data privacy
+- **Webhook signature verification** for secure notifications
+- **Role-based access control** (Admin/User roles)
+
+### 🏗️ **Modern Architecture**
+- **Service layer pattern** for clean separation of concerns
+- **Dependency injection** for improved testability
+- **Database connection pooling** for optimal performance
+- **Comprehensive error handling** with detailed logging
+- **Configuration management** with YAML support
+
+### 📈 **Data Management**
+- **Multi-database support** (SQLite, MySQL, PostgreSQL)
+- **SQL query management** with execution tracking
+- **Data source management** for centralized connection handling
+- **Query caching** for improved performance
+- **Dashboard statistics** and analytics
 
 ---
 
-## Prerequisites
+## 🎯 Use Cases
+
+### **Embedded Analytics**
+```go
+// Integrate BI directly into your Go application
+client := gobi.NewClient("https://your-gobi-instance.com")
+client.SetAPIKey("your-api-key")
+
+// Create charts programmatically
+chart := &gobi.Chart{
+    Name: "Sales Analytics",
+    Type: "3d_surface",
+    Data: salesData,
+}
+```
+
+### **Automated Reporting**
+```yaml
+# Schedule daily reports with webhook notifications
+schedule:
+  name: "Daily Sales Report"
+  cron: "0 9 * * *"  # Every day at 9 AM
+  webhook: "https://your-app.com/webhooks/reports"
+```
+
+### **API-First Integration**
+```bash
+# Service-to-service authentication
+curl -H "Authorization: ApiKey your-api-key" \
+     https://gobi.example.com/api/charts
+
+# Real-time webhook notifications
+POST /webhooks/reports
+{
+  "event": "report.generated",
+  "data": { "report_id": 123, "status": "success" }
+}
+```
+
+---
+
+## 🛠️ Technology Stack
+
+- **Backend**: Go 1.21+ with Gin framework
+- **Database**: SQLite (dev) / MySQL/PostgreSQL (prod)
+- **Authentication**: JWT + API Keys with bcrypt hashing
+- **Charts**: Custom 3D rendering with WebGL support
+- **Scheduling**: Cron-based with timezone support
+- **Notifications**: Webhook system with HMAC signatures
+- **Documentation**: OpenAPI/Swagger ready
+
+---
+
+## 📊 Chart Gallery
+
+| Chart Type | 2D | 3D | Interactive |
+|------------|----|----|-------------|
+| Bar Charts | ✅ | ✅ | ✅ |
+| Line Charts | ✅ | ❌ | ✅ |
+| Pie Charts | ✅ | ❌ | ✅ |
+| Scatter Plots | ✅ | ✅ | ✅ |
+| Surface Charts | ❌ | ✅ | ✅ |
+| Heat Maps | ✅ | ❌ | ✅ |
+| Gauge Charts | ✅ | ❌ | ✅ |
+| Funnel Charts | ✅ | ❌ | ✅ |
+
+---
+
+## 🔧 Prerequisites
 
 - Go 1.21 or later
 - SQLite (for development)
-- MySQL/PostgreSQL (optional)
+- MySQL/PostgreSQL (for production)
 
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
 ```bash
+# Clone and run
 git clone https://github.com/sy-vendor/gobi.git
 cd gobi
 go mod download
 go run cmd/server/main.go
-```
 
-The server will start on port 8080 by default.
+# Server starts on http://localhost:8080
+# Default admin: admin/admin123
+```
 
 ---
 
-## Configuration
+## 📋 Configuration
 
 ### Configuration File
 
@@ -77,7 +193,7 @@ default:
 
 ---
 
-## API Endpoints
+## 🔌 API Endpoints
 
 ### Authentication
 - `POST /api/auth/register` — Register a new user
@@ -140,7 +256,7 @@ default:
 
 ---
 
-## Chart Types
+## 📊 Chart Types
 
 Supported chart types:
 - Bar charts
@@ -158,7 +274,7 @@ Supported chart types:
 
 ---
 
-## Cron Expression Guide
+## ⏰ Cron Expression Guide
 
 ### Basic Format
 
@@ -180,7 +296,7 @@ Supported chart types:
 
 ---
 
-## API Usage Examples
+## 🔌 API Usage Examples
 
 ### Login
 
@@ -285,7 +401,7 @@ curl -X POST http://localhost:8080/api/reports/schedules \
 
 ---
 
-## Webhook Events
+## 📊 Webhook Events
 
 ### Supported Events
 
@@ -339,7 +455,7 @@ def verify_signature(payload, signature, timestamp, secret):
 
 ---
 
-## Authentication Methods
+## 🔐 Authentication Methods
 
 ### JWT Authentication
 Use `Authorization: Bearer <jwt_token>` header for user authentication.
@@ -363,7 +479,7 @@ Use `Authorization: ApiKey <api_key>` header for service-to-service authenticati
 
 ---
 
-## Error Handling
+## 🔧 Error Handling
 
 All API errors are returned in JSON format:
 
@@ -385,7 +501,7 @@ All API errors are returned in JSON format:
 
 ---
 
-## Security
+## 🔒 Security
 
 - JWT authentication for all endpoints
 - **API key authentication for service-to-service communication**
@@ -398,6 +514,6 @@ All API errors are returned in JSON format:
 
 ---
 
-## Docker Deployment
+## 📦 Docker Deployment
 
 _Coming soon..._
