@@ -32,7 +32,7 @@ fi
 
 # 执行SQL脚本
 echo "2. Executing SQL script..."
-if sqlite3 "$TEST_DB" < scripts/generate_area_chart_data.sql; then
+if sqlite3 "$TEST_DB" < ../data/generate_area_chart_data.sql; then
     echo -e "${GREEN}   ✓ SQL script executed successfully${NC}"
 else
     echo -e "${RED}   ✗ Failed to execute SQL script${NC}"
@@ -139,8 +139,7 @@ echo -e "${GREEN}✓${NC} All sample queries working"
 echo -e "${GREEN}✓${NC} Area chart SQL data is ready to use!"
 echo
 echo "You can now use these SQL queries in Gobi to create area charts:"
-echo "1. Copy the SQL from scripts/generate_area_chart_data.sql"
+echo "1. Copy the SQL from scripts/data/generate_area_chart_data.sql"
 echo "2. Execute it in your database"
 echo "3. Use the sample queries in Gobi to create area charts"
 echo
-echo "For detailed usage instructions, see: docs/area_chart_guide.md" 
