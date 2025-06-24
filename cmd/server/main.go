@@ -84,10 +84,15 @@ func main() {
 
 	// Protected routes
 	authorized := r.Group("/api")
-	authorized.Use(middleware.AuthMiddleware(&cfg))
+	authorized.Use(middleware.AuthMiddleware(&cfg, h.UserService))
 	{
 		// User routes
 		authorized.GET("/me", h.GetMe)
+
+		// API Key management
+		authorized.POST("/apikeys", h.CreateAPIKey)
+		authorized.GET("/apikeys", h.ListAPIKeys)
+		authorized.DELETE("/apikeys/:id", h.RevokeAPIKey)
 
 		// Query routes
 		authorized.POST("/queries", h.CreateQuery)

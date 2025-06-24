@@ -91,3 +91,21 @@ type ReportSchedule struct {
 	Active      bool      // whether the schedule is active
 	CronPattern string    // cron pattern for scheduling
 }
+
+// APIKey represents an API key for service-to-service authentication
+// Each key is associated with a user (owner), has a name, key value, and status
+// Key is stored as a hash for security
+// ExpiresAt is optional (nil means never expires)
+// Add this comment for migration reference
+// NOTE: Remember to add &APIKey{} to your auto-migration in main.go or database.go
+type APIKey struct {
+	ID        uint       `gorm:"primaryKey" json:"id"`
+	UserID    uint       `gorm:"index" json:"user_id"`
+	User      User       `gorm:"constraint:OnDelete:CASCADE"`
+	Name      string     `gorm:"type:varchar(64)" json:"name"`
+	KeyHash   string     `gorm:"type:varchar(128);uniqueIndex" json:"-"` // hashed key
+	Prefix    string     `gorm:"type:varchar(16);index" json:"prefix"`   // for fast lookup
+	CreatedAt time.Time  `json:"created_at"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	Revoked   bool       `gorm:"default:false" json:"revoked"`
+}

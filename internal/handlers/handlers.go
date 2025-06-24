@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -761,4 +762,61 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
+}
+
+// CreateAPIKey handles API key creation for the authenticated user
+func (h *Handler) CreateAPIKey(c *gin.Context) {
+	userID, _ := c.Get("userID")
+	var req struct {
+		Name      string     `json:"name"`
+		ExpiresAt *time.Time `json:"expires_at"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(errors.NewBadRequestError("Invalid API key data", err))
+		return
+	}
+	plainKey, apiKey, err := h.UserService.CreateAPIKey(userID.(uint), req.Name, req.ExpiresAt)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	resp := gin.H{
+		"api_key":    plainKey, // Only show once
+		"prefix":     apiKey.Prefix,
+		"name":       apiKey.Name,
+		"expires_at": apiKey.ExpiresAt,
+		"created_at": apiKey.CreatedAt,
+	}
+	c.JSON(http.StatusCreated, resp)
+}
+
+// ListAPIKeys lists all API keys for the user (admin can list all)
+func (h *Handler) ListAPIKeys(c *gin.Context) {
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+	keys, err := h.UserService.ListAPIKeys(userID.(uint), isAdmin)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, keys)
+}
+
+// RevokeAPIKey revokes an API key by ID
+func (h *Handler) RevokeAPIKey(c *gin.Context) {
+	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+	id := c.Param("id")
+	keyID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		c.Error(errors.NewBadRequestError("Invalid API key ID", err))
+		return
+	}
+	if err := h.UserService.RevokeAPIKey(uint(keyID), userID.(uint), isAdmin); err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "API key revoked"})
 }
