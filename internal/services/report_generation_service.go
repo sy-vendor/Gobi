@@ -101,6 +101,7 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 			report.Status = "failed"
 			report.Error = "Invalid queries configuration"
 			s.db.Save(&report)
+			s.triggerReportWebhooks(schedule, &report, errors.NewError(400, "Invalid queries configuration", err))
 			return errors.WrapError(err, "Invalid queries configuration")
 		}
 	}
@@ -110,6 +111,7 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 			report.Status = "failed"
 			report.Error = "Invalid charts configuration"
 			s.db.Save(&report)
+			s.triggerReportWebhooks(schedule, &report, errors.NewError(400, "Invalid charts configuration", err))
 			return errors.WrapError(err, "Invalid charts configuration")
 		}
 	}
@@ -119,6 +121,7 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 			report.Status = "failed"
 			report.Error = "Invalid templates configuration"
 			s.db.Save(&report)
+			s.triggerReportWebhooks(schedule, &report, errors.NewError(400, "Invalid templates configuration", err))
 			return errors.WrapError(err, "Invalid templates configuration")
 		}
 	}
@@ -129,6 +132,7 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 		report.Status = "failed"
 		report.Error = err.Error()
 		s.db.Save(&report)
+		s.triggerReportWebhooks(schedule, &report, err)
 		return err
 	}
 
@@ -139,6 +143,13 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 	if err := s.db.Save(&report).Error; err != nil {
 		return errors.WrapError(err, "Could not update report status")
 	}
+
+	// Update schedule status
+	schedule.LastRun = time.Now()
+	s.db.Save(schedule)
+
+	// Trigger webhook notifications
+	s.triggerReportWebhooks(schedule, &report, nil)
 
 	return nil
 }
@@ -184,4 +195,37 @@ func (s *ReportGenerationService) DownloadReport(reportID uint, userID uint, isA
 	}
 
 	return &report, nil
+}
+
+// triggerReportWebhooks sends webhook notifications for report events
+func (s *ReportGenerationService) triggerReportWebhooks(schedule *models.ReportSchedule, report *models.Report, err error) {
+	webhookService := NewWebhookService(s.db)
+
+	event := "report.generated"
+	payload := map[string]interface{}{
+		"event": event,
+		"data": map[string]interface{}{
+			"report_id":     report.ID,
+			"report_name":   report.Name,
+			"schedule_id":   schedule.ID,
+			"schedule_name": schedule.Name,
+			"status":        report.Status,
+			"generated_at":  report.GeneratedAt,
+			"file_size":     len(report.Content),
+			"download_url":  fmt.Sprintf("/api/reports/%d/download", report.ID),
+		},
+	}
+
+	if err != nil {
+		event = "report.failed"
+		payload["event"] = event
+		payload["data"].(map[string]interface{})["error"] = err.Error()
+	}
+
+	// Trigger webhook asynchronously
+	go func() {
+		if webhookErr := webhookService.TriggerWebhook(event, payload, schedule.UserID); webhookErr != nil {
+			utils.Logger.Errorf("Failed to trigger webhook for report %d: %v", report.ID, webhookErr)
+		}
+	}()
 }

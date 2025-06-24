@@ -39,6 +39,8 @@ func InitDB(cfg *config.Config) error {
 		&models.Report{},
 		&models.ReportSchedule{},
 		&models.APIKey{},
+		&models.Webhook{},
+		&models.WebhookDelivery{},
 	)
 	if err != nil {
 		return err
