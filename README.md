@@ -142,6 +142,7 @@ POST /webhooks/reports
 | Funnel Charts | ✅ | ❌ | ✅ |
 | TreeMap Charts | ✅ | ❌ | ✅ |
 | Sunburst Charts | ✅ | ❌ | ✅ |
+| Tree Diagram | ✅ | ❌ | ✅ |
 
 ---
 
@@ -261,6 +262,9 @@ default:
 
 ## 📊 Chart Types
 
+TreeMap (rectangular, area-based): shows hierarchy using nested rectangles, area represents value.
+Tree Diagram: shows hierarchy using nodes and branches (parent-child), like org charts or family trees.
+
 Supported chart types:
 - Bar charts
 - Line charts
@@ -277,6 +281,7 @@ Supported chart types:
 - 3D Bubble charts
 - TreeMap charts
 - Sunburst charts
+- Tree Diagram
 
 ---
 
