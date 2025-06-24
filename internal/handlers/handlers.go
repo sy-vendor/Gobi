@@ -351,6 +351,8 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"3d-scatter": true,
 		"3d-surface": true,
 		"3d-bubble":  true,
+		"treemap":    true,
+		"sunburst":   true,
 	}
 
 	if !validChartTypes[req.Type] {

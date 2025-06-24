@@ -140,6 +140,8 @@ POST /webhooks/reports
 | Heat Maps | ✅ | ❌ | ✅ |
 | Gauge Charts | ✅ | ❌ | ✅ |
 | Funnel Charts | ✅ | ❌ | ✅ |
+| TreeMap Charts | ✅ | ❌ | ✅ |
+| Sunburst Charts | ✅ | ❌ | ✅ |
 
 ---
 
@@ -273,6 +275,8 @@ Supported chart types:
 - 3D Scatter plots
 - 3D Surface charts
 - 3D Bubble charts
+- TreeMap charts
+- Sunburst charts
 
 ---
 
