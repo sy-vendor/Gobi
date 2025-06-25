@@ -359,6 +359,7 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"wordcloud":   true,
 		"graph":       true,
 		"waterfall":   true,
+		"polar":       true,
 	}
 
 	if !validChartTypes[req.Type] {
