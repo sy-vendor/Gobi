@@ -17,6 +17,7 @@
 - [矩形树状图（TreeMap）](#矩形树状图treemap)
 - [旭日图 (Sunburst)](#旭日图-sunburst)
 - [树形图 (Tree Diagram)](#树形图-tree-diagram)
+- [箱线图 (Box Plot)](#箱线图-box-plot)
 
 ## 🔐 认证
 
@@ -1051,6 +1052,235 @@ curl -X POST "http://localhost:8080/api/charts" \
     "type": "tree",
     "config": "{\"idField\":\"id\",\"parentField\":\"parent_id\",\"nameField\":\"name\",\"valueField\":\"position\",\"title\":\"公司组织架构\",\"legend\":true,\"tooltip\":true}",
     "description": "展示公司组织架构的分支结构树",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+---
+
+## 📦 箱线图 (Box Plot)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "成绩数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含学生成绩分布数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "成绩分布查询",
+    "dataSourceId": 30,
+    "sql": "SELECT class, subject, score FROM student_scores ORDER BY class, subject",
+    "description": "查询不同班级不同科目的成绩分布"
+  }'
+```
+
+### 3. 创建箱线图
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "班级成绩箱线图",
+    "queryId": 30,
+    "type": "boxplot",
+    "config": "{
+      \"xField\": \"class\",
+      \"yField\": \"score\",
+      \"seriesField\": \"subject\",
+      \"title\": \"各班级各科目成绩分布\",
+      \"legend\": true,
+      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\"],
+      \"tooltip\": true,
+      \"boxStyle\": {
+        \"stroke\": \"#545454\",
+        \"fill\": \"#f6f6f6\"
+      },
+      \"outlierStyle\": {
+        \"fill\": \"#f5222d\",
+        \"stroke\": \"#f5222d\"
+      }
+    }",
+    "description": "展示不同班级各科目成绩的分布情况"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 30,
+    "name": "班级成绩箱线图",
+    "queryId": 30,
+    "type": "boxplot",
+    "config": "{\"xField\":\"class\",\"yField\":\"score\",\"seriesField\":\"subject\",\"title\":\"各班级各科目成绩分布\",\"legend\":true,\"color\":[\"#1890ff\",\"#2fc25b\",\"#facc14\"],\"tooltip\":true,\"boxStyle\":{\"stroke\":\"#545454\",\"fill\":\"#f6f6f6\"},\"outlierStyle\":{\"fill\":\"#f5222d\",\"stroke\":\"#f5222d\"}}",
+    "description": "展示不同班级各科目成绩的分布情况",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+### 4. 获取箱线图数据
+
+**请求**:
+```bash
+curl -X GET "http://localhost:8080/api/charts/30/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 30,
+      "name": "班级成绩箱线图",
+      "type": "boxplot",
+      "config": {
+        "xField": "class",
+        "yField": "score",
+        "seriesField": "subject",
+        "title": "各班级各科目成绩分布",
+        "legend": true,
+        "color": ["#1890ff", "#2fc25b", "#facc14"],
+        "tooltip": true,
+        "boxStyle": {
+          "stroke": "#545454",
+          "fill": "#f6f6f6"
+        },
+        "outlierStyle": {
+          "fill": "#f5222d",
+          "stroke": "#f5222d"
+        }
+      }
+    },
+    "data": [
+      {
+        "class": "A班",
+        "subject": "数学",
+        "score": 85.5
+      },
+      {
+        "class": "A班",
+        "subject": "数学",
+        "score": 92.3
+      },
+      {
+        "class": "A班",
+        "subject": "英语",
+        "score": 88.2
+      },
+      {
+        "class": "B班",
+        "subject": "数学",
+        "score": 72.8
+      },
+      {
+        "class": "B班",
+        "subject": "英语",
+        "score": 82.5
+      }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
+
+---
+
+## 📦 产品性能箱线图 (Product Performance Box Plot)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品性能数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含产品性能测试数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品性能查询",
+    "dataSourceId": 31,
+    "sql": "SELECT product_type, test_metric, value FROM product_performance ORDER BY product_type, test_metric",
+    "description": "查询不同产品类型的性能测试数据"
+  }'
+```
+
+### 3. 创建产品性能箱线图
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品性能箱线图",
+    "queryId": 31,
+    "type": "boxplot",
+    "config": "{
+      \"xField\": \"product_type\",
+      \"yField\": \"value\",
+      \"seriesField\": \"test_metric\",
+      \"title\": \"产品性能测试分布\",
+      \"legend\": true,
+      \"color\": [\"#722ed1\", \"#13c2c2\"],
+      \"tooltip\": true,
+      \"boxStyle\": {
+        \"stroke\": \"#545454\",
+        \"fill\": \"#f6f6f6\"
+      },
+      \"outlierStyle\": {
+        \"fill\": \"#f5222d\",
+        \"stroke\": \"#f5222d\"
+      }
+    }",
+    "description": "展示不同产品类型的性能测试分布"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 31,
+    "name": "产品性能箱线图",
+    "queryId": 31,
+    "type": "boxplot",
+    "config": "{\"xField\":\"product_type\",\"yField\":\"value\",\"seriesField\":\"test_metric\",\"title\":\"产品性能测试分布\",\"legend\":true,\"color\":[\"#722ed1\",\"#13c2c2\"],\"tooltip\":true,\"boxStyle\":{\"stroke\":\"#545454\",\"fill\":\"#f6f6f6\"},\"outlierStyle\":{\"fill\":\"#f5222d\",\"stroke\":\"#f5222d\"}}",
+    "description": "展示不同产品类型的性能测试分布",
     "userID": 1,
     "createdAt": "2025-06-24T11:50:00Z",
     "updatedAt": "2025-06-24T11:50:00Z"

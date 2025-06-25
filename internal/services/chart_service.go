@@ -144,6 +144,7 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"treemap":    true,
 		"sunburst":   true,
 		"tree":       true,
+		"boxplot":    true,
 	}
 
 	if !validChartTypes[chartType] {
