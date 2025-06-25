@@ -145,6 +145,8 @@ POST /webhooks/reports
 | 树形图 | ✅ | ❌ | ✅ |
 | 箱线图 | ✅ | ❌ | ✅ |
 | K线图 | ✅ | ❌ | ✅ |
+| 词云图 | ✅ | ❌ | ✅ |
+| 关系图 | ✅ | ❌ | ✅ |
 
 ---
 
@@ -284,6 +286,7 @@ default:
 - 箱线图（Box Plot）
 - K线图/蜡烛图（Candlestick）
 - 词云图（Word Cloud）
+- 关系图/力导向图（Graph/Network/Force-directed）
 
 ---
 
@@ -294,6 +297,7 @@ default:
 - 箱线图（Box Plot）：用箱线图表示数据分布和五数概括，适合数据分析。
 - K线图/蜡烛图（Candlestick）：用于股票/金融数据的可视化。
 - 词云图（Word Cloud）：用字体大小表示词语频率或重要性，适合文本数据可视化。
+- 关系图/力导向图（Graph/Network/Force-directed）：用节点和边表达实体关系，支持力导向布局，适合网络结构分析。
 
 ---
 

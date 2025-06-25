@@ -20,6 +20,7 @@
 - [箱线图 (Box Plot)](#箱线图-box-plot)
 - [K线图/蜡烛图 (Candlestick Chart)](#k线图蜡烛图-candlestick-chart)
 - [词云图 (Word Cloud)](#词云图-word-cloud)
+- [关系图/力导向图 (Graph/Network/Force-directed)](#关系图力导向图-graphnetworkforce-directed)
 
 ## 🔐 认证
 
@@ -2035,3 +2036,83 @@ curl -X GET "http://localhost:8080/api/charts/50/data" \
 - 颜色字段：可选，用于分类着色
 
 *最后更新：2025年6月* 
+
+---
+
+## 🔗 关系图/力导向图 (Graph/Network/Force-directed)
+
+### 1. 创建数据源
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "关系图数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含节点和边的关系图数据"
+  }'
+```
+
+### 2. 创建节点查询
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "Graph Nodes",
+    "dataSourceId": 1,
+    "sql": "SELECT id, name, group_id, value, category FROM graph_nodes",
+    "description": "关系图节点数据"
+  }'
+```
+
+### 3. 创建边查询
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "Graph Edges",
+    "dataSourceId": 1,
+    "sql": "SELECT source, target, weight, relation FROM graph_edges",
+    "description": "关系图边数据"
+  }'
+```
+
+### 4. 创建关系图表
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "关系图示例",
+    "queryId": 10,
+    "type": "graph",
+    "config": "{\"nodesQueryId\":10,\"edgesQueryId\":11,\"sourceField\":\"source\",\"targetField\":\"target\",\"nodeIdField\":\"id\",\"nodeNameField\":\"name\",\"groupField\":\"group_id\",\"categoryField\":\"category\",\"valueField\":\"value\",\"relationField\":\"relation\",\"weightField\":\"weight\",\"title\":\"关系图示例\",\"legend\":true,\"color\":[\"#1890ff\",\"#2fc25b\",\"#facc14\",\"#f5222d\"],\"tooltip\":true,\"repulsion\":200,\"gravity\":0.1,\"edgeSymbol\":[\"circle\",\"arrow\"],\"layout\":\"force\"}",
+    "description": "展示节点和边的关系图/力导向图"
+  }'
+```
+
+**配置参数说明**:
+- `nodesQueryId`: 节点查询ID
+- `edgesQueryId`: 边查询ID
+- `sourceField`/`targetField`: 边的起止字段
+- `nodeIdField`/`nodeNameField`: 节点ID/名称字段
+- `groupField`/`categoryField`: 分组/分类字段
+- `valueField`: 节点权重
+- `relationField`: 边关系类型
+- `weightField`: 边权重
+- `title`/`legend`/`color`/`tooltip`/`repulsion`/`gravity`/`edgeSymbol`/`layout` 等
+
+**数据格式要求**:
+- 节点表需包含 id、name、group_id、value、category 等字段
+- 边表需包含 source、target、weight、relation 等字段

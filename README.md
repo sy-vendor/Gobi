@@ -145,6 +145,8 @@ POST /webhooks/reports
 | Tree Diagram | ✅ | ❌ | ✅ |
 | Box Plot | ✅ | ❌ | ✅ |
 | Candlestick Chart | ✅ | ❌ | ✅ |
+| Word Cloud                  | ✅ | ❌ | ✅ |
+| Graph/Network/Force-directed| ✅ | ❌ | ✅ |
 
 ---
 
@@ -268,6 +270,7 @@ TreeMap (rectangular, area-based): shows hierarchy using nested rectangles, area
 Tree Diagram: shows hierarchy using nodes and branches (parent-child), like org charts or family trees.
 Box Plot: shows distribution of data based on five-number summary.
 Word Cloud: shows text data visualization where font size represents word frequency or importance.
+Graph/Network/Force-directed: shows relationships between entities using nodes and edges, supports force-directed layout for network analysis.
 
 Supported chart types:
 - Bar charts
@@ -289,6 +292,7 @@ Supported chart types:
 - Box Plot charts
 - Candlestick charts (K-line/Stock charts)
 - Word Cloud charts
+- Graph/Network/Force-directed charts
 
 ---
 
