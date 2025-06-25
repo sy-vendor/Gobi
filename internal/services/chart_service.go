@@ -148,6 +148,7 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"candlestick": true,
 		"wordcloud":   true,
 		"graph":       true,
+		"waterfall":   true,
 	}
 
 	if !validChartTypes[chartType] {
