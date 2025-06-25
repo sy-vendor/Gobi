@@ -18,6 +18,7 @@
 - [旭日图 (Sunburst)](#旭日图-sunburst)
 - [树形图 (Tree Diagram)](#树形图-tree-diagram)
 - [箱线图 (Box Plot)](#箱线图-box-plot)
+- [K线图/蜡烛图 (Candlestick Chart)](#k线图蜡烛图-candlestick-chart)
 
 ## 🔐 认证
 
@@ -1419,5 +1420,312 @@ curl -X GET "http://localhost:8080/api/charts?type=area" \
    使用上面的示例创建你需要的图表类型。
 
 ---
+
+## 📈 K线图/蜡烛图 (Candlestick Chart)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "股票数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含股票价格数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "股票价格查询",
+    "dataSourceId": 40,
+    "sql": "SELECT date, open_price, high_price, low_price, close_price, volume FROM stock_prices WHERE symbol='STOCK_A' ORDER BY date",
+    "description": "查询股票A的价格数据"
+  }'
+```
+
+### 3. 创建K线图
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "股票A K线图",
+    "queryId": 40,
+    "type": "candlestick",
+    "config": "{
+      \"xField\": \"date\",
+      \"openField\": \"open_price\",
+      \"highField\": \"high_price\",
+      \"lowField\": \"low_price\",
+      \"closeField\": \"close_price\",
+      \"volumeField\": \"volume\",
+      \"title\": \"股票A价格走势\",
+      \"legend\": true,
+      \"color\": [\"#f5222d\", \"#52c41a\"],
+      \"tooltip\": true,
+      \"candlestickStyle\": {
+        \"stroke\": \"#000000\",
+        \"lineWidth\": 1
+      },
+      \"volumeStyle\": {
+        \"fill\": \"#1890ff\",
+        \"opacity\": 0.6
+      }
+    }",
+    "description": "展示股票A的价格走势和成交量"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 40,
+    "name": "股票A K线图",
+    "queryId": 40,
+    "type": "candlestick",
+    "config": "{\"xField\":\"date\",\"openField\":\"open_price\",\"highField\":\"high_price\",\"lowField\":\"low_price\",\"closeField\":\"close_price\",\"volumeField\":\"volume\",\"title\":\"股票A价格走势\",\"legend\":true,\"color\":[\"#f5222d\",\"#52c41a\"],\"tooltip\":true,\"candlestickStyle\":{\"stroke\":\"#000000\",\"lineWidth\":1},\"volumeStyle\":{\"fill\":\"#1890ff\",\"opacity\":0.6}}",
+    "description": "展示股票A的价格走势和成交量",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+### 4. 获取K线图数据
+
+**请求**:
+```bash
+curl -X GET "http://localhost:8080/api/charts/40/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 40,
+      "name": "股票A K线图",
+      "type": "candlestick",
+      "config": {
+        "xField": "date",
+        "openField": "open_price",
+        "highField": "high_price",
+        "lowField": "low_price",
+        "closeField": "close_price",
+        "volumeField": "volume",
+        "title": "股票A价格走势",
+        "legend": true,
+        "color": ["#f5222d", "#52c41a"],
+        "tooltip": true,
+        "candlestickStyle": {
+          "stroke": "#000000",
+          "lineWidth": 1
+        },
+        "volumeStyle": {
+          "fill": "#1890ff",
+          "opacity": 0.6
+        }
+      }
+    },
+    "data": [
+      {
+        "date": "2024-01-02",
+        "open_price": 100.50,
+        "high_price": 102.30,
+        "low_price": 99.80,
+        "close_price": 101.20,
+        "volume": 1500000
+      },
+      {
+        "date": "2024-01-03",
+        "open_price": 101.20,
+        "high_price": 103.50,
+        "low_price": 100.90,
+        "close_price": 102.80,
+        "volume": 1800000
+      },
+      {
+        "date": "2024-01-04",
+        "open_price": 102.80,
+        "high_price": 104.20,
+        "low_price": 101.50,
+        "close_price": 103.90,
+        "volume": 2200000
+      }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
+
+---
+
+## 📈 加密货币K线图 (Crypto Candlestick Chart)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "加密货币数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含加密货币价格数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "比特币价格查询",
+    "dataSourceId": 41,
+    "sql": "SELECT date, open_price, high_price, low_price, close_price, volume FROM crypto_prices WHERE symbol='BTC' ORDER BY date",
+    "description": "查询比特币的价格数据"
+  }'
+```
+
+### 3. 创建加密货币K线图
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "比特币K线图",
+    "queryId": 41,
+    "type": "candlestick",
+    "config": "{
+      \"xField\": \"date\",
+      \"openField\": \"open_price\",
+      \"highField\": \"high_price\",
+      \"lowField\": \"low_price\",
+      \"closeField\": \"close_price\",
+      \"volumeField\": \"volume\",
+      \"title\": \"比特币价格走势\",
+      \"legend\": true,
+      \"color\": [\"#f5222d\", \"#52c41a\"],
+      \"tooltip\": true,
+      \"candlestickStyle\": {
+        \"stroke\": \"#000000\",
+        \"lineWidth\": 1
+      },
+      \"volumeStyle\": {
+        \"fill\": \"#722ed1\",
+        \"opacity\": 0.6
+      }
+    }",
+    "description": "展示比特币的价格走势和成交量"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 41,
+    "name": "比特币K线图",
+    "queryId": 41,
+    "type": "candlestick",
+    "config": "{\"xField\":\"date\",\"openField\":\"open_price\",\"highField\":\"high_price\",\"lowField\":\"low_price\",\"closeField\":\"close_price\",\"volumeField\":\"volume\",\"title\":\"比特币价格走势\",\"legend\":true,\"color\":[\"#f5222d\",\"#52c41a\"],\"tooltip\":true,\"candlestickStyle\":{\"stroke\":\"#000000\",\"lineWidth\":1},\"volumeStyle\":{\"fill\":\"#722ed1\",\"opacity\":0.6}}",
+    "description": "展示比特币的价格走势和成交量",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+---
+
+## 📈 多股票对比K线图 (Multi-Stock Candlestick Chart)
+
+### 1. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "多股票价格查询",
+    "dataSourceId": 40,
+    "sql": "SELECT date, symbol, open_price, high_price, low_price, close_price, volume FROM stock_prices WHERE symbol IN ('STOCK_A', 'STOCK_B') ORDER BY date, symbol",
+    "description": "查询多只股票的价格数据"
+  }'
+```
+
+### 3. 创建多股票对比K线图
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "多股票对比K线图",
+    "queryId": 42,
+    "type": "candlestick",
+    "config": "{
+      \"xField\": \"date\",
+      \"openField\": \"open_price\",
+      \"highField\": \"high_price\",
+      \"lowField\": \"low_price\",
+      \"closeField\": \"close_price\",
+      \"volumeField\": \"volume\",
+      \"seriesField\": \"symbol\",
+      \"title\": \"多股票价格对比\",
+      \"legend\": true,
+      \"color\": [\"#f5222d\", \"#52c41a\", \"#1890ff\"],
+      \"tooltip\": true,
+      \"candlestickStyle\": {
+        \"stroke\": \"#000000\",
+        \"lineWidth\": 1
+      },
+      \"volumeStyle\": {
+        \"fill\": \"#722ed1\",
+        \"opacity\": 0.6
+      }
+    }",
+    "description": "展示多只股票的价格对比"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 42,
+    "name": "多股票对比K线图",
+    "queryId": 42,
+    "type": "candlestick",
+    "config": "{\"xField\":\"date\",\"openField\":\"open_price\",\"highField\":\"high_price\",\"lowField\":\"low_price\",\"closeField\":\"close_price\",\"volumeField\":\"volume\",\"seriesField\":\"symbol\",\"title\":\"多股票价格对比\",\"legend\":true,\"color\":[\"#f5222d\",\"#52c41a\",\"#1890ff\"],\"tooltip\":true,\"candlestickStyle\":{\"stroke\":\"#000000\",\"lineWidth\":1},\"volumeStyle\":{\"fill\":\"#722ed1\",\"opacity\":0.6}}",
+    "description": "展示多只股票的价格对比",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
 
 *最后更新：2025年6月* 

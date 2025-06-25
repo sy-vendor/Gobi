@@ -144,6 +144,7 @@ POST /webhooks/reports
 | Sunburst Charts | ✅ | ❌ | ✅ |
 | Tree Diagram | ✅ | ❌ | ✅ |
 | Box Plot | ✅ | ❌ | ✅ |
+| Candlestick Chart | ✅ | ❌ | ✅ |
 
 ---
 
@@ -285,6 +286,7 @@ Supported chart types:
 - Sunburst charts
 - Tree Diagram
 - Box Plot charts
+- Candlestick charts (K-line/Stock charts)
 
 ---
 
