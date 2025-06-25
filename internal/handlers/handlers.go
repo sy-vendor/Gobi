@@ -338,23 +338,24 @@ func (h *Handler) CreateChart(c *gin.Context) {
 
 	// 验证图表类型
 	validChartTypes := map[string]bool{
-		"bar":        true,
-		"line":       true,
-		"pie":        true,
-		"scatter":    true,
-		"radar":      true,
-		"heatmap":    true,
-		"gauge":      true,
-		"funnel":     true,
-		"area":       true, // 面积图 - 显示数据趋势和变化量
-		"3d-bar":     true,
-		"3d-scatter": true,
-		"3d-surface": true,
-		"3d-bubble":  true,
-		"treemap":    true,
-		"sunburst":   true,
-		"tree":       true,
-		"boxplot":    true,
+		"bar":         true,
+		"line":        true,
+		"pie":         true,
+		"scatter":     true,
+		"radar":       true,
+		"heatmap":     true,
+		"gauge":       true,
+		"funnel":      true,
+		"area":        true, // 面积图 - 显示数据趋势和变化量
+		"3d-bar":      true,
+		"3d-scatter":  true,
+		"3d-surface":  true,
+		"3d-bubble":   true,
+		"treemap":     true,
+		"sunburst":    true,
+		"tree":        true,
+		"boxplot":     true,
+		"candlestick": true,
 	}
 
 	if !validChartTypes[req.Type] {
