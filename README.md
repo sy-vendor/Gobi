@@ -144,9 +144,9 @@ POST /webhooks/reports
 | Sunburst Charts | ✅ | ❌ | ✅ |
 | Tree Diagram | ✅ | ❌ | ✅ |
 | Box Plot | ✅ | ❌ | ✅ |
-| Candlestick Chart | ✅ | ❌ | ✅ |
-| Word Cloud                  | ✅ | ❌ | ✅ |
-| Graph/Network/Force-directed| ✅ | ❌ | ✅ |
+| Candlestick charts | ✅ | ❌ | ✅ |
+| Word Cloud charts | ✅ | ❌ | ✅ |
+| Graph charts | ✅ | ❌ | ✅ |
 
 ---
 
