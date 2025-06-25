@@ -143,6 +143,7 @@ POST /webhooks/reports
 | TreeMap Charts | ✅ | ❌ | ✅ |
 | Sunburst Charts | ✅ | ❌ | ✅ |
 | Tree Diagram | ✅ | ❌ | ✅ |
+| Box Plot | ✅ | ❌ | ✅ |
 
 ---
 
@@ -264,6 +265,7 @@ default:
 
 TreeMap (rectangular, area-based): shows hierarchy using nested rectangles, area represents value.
 Tree Diagram: shows hierarchy using nodes and branches (parent-child), like org charts or family trees.
+Box Plot: shows distribution of data based on five-number summary.
 
 Supported chart types:
 - Bar charts
@@ -282,6 +284,7 @@ Supported chart types:
 - TreeMap charts
 - Sunburst charts
 - Tree Diagram
+- Box Plot charts
 
 ---
 

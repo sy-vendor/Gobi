@@ -354,6 +354,7 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"treemap":    true,
 		"sunburst":   true,
 		"tree":       true,
+		"boxplot":    true,
 	}
 
 	if !validChartTypes[req.Type] {

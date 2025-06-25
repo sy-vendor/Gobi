@@ -143,6 +143,7 @@ POST /webhooks/reports
 | 矩形树状图（TreeMap） | ✅ | ❌ | ✅ |
 | 旭日图 | ✅ | ❌ | ✅ |
 | 树形图（Tree Diagram） | ✅ | ❌ | ✅ |
+| 箱线图（Box Plot） | ✅ | ❌ | ✅ |
 
 ---
 
@@ -279,6 +280,7 @@ default:
 - 矩形树状图（TreeMap）
 - 旭日图
 - 树形图（Tree Diagram）
+- 箱线图（Box Plot）
 
 ---
 
@@ -286,6 +288,7 @@ default:
 
 - 矩形树状图（TreeMap）：用嵌套矩形面积表达层级和数值，适合占比分析。
 - 树形图（Tree Diagram）：用节点和连线表达层级关系，适合组织架构、家谱等分支结构。
+- 箱线图（Box Plot）：用箱线图表示数据分布和五数概括，适合数据分析。
 
 ---
 
