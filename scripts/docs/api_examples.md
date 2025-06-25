@@ -22,6 +22,7 @@
 - [词云图 (Word Cloud)](#词云图-word-cloud)
 - [关系图/力导向图 (Graph/Network/Force-directed)](#关系图力导向图-graphnetworkforce-directed)
 - [瀑布图 (Waterfall Chart)](#瀑布图-waterfall-chart)
+- [极坐标图 (Polar Chart)](#极坐标图-polar-chart)
 
 ## 🔐 认证
 
@@ -2214,6 +2215,110 @@ curl -X GET "http://localhost:8080/api/charts/1/data" \
       { "step": "运营成本", "amount": -1200, "type": "decrease", "description": "日常运营支出" },
       { "step": "税费", "amount": -300, "type": "decrease", "description": "税收及附加" },
       { "step": "净利润", "amount": 2000, "type": "base", "description": "年末净利润" }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
+
+---
+
+## 🧭 极坐标图 (Polar Chart)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "极坐标数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含风向玫瑰图和月份销售数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "风向玫瑰图查询",
+    "dataSourceId": 1,
+    "sql": "SELECT angle, value, category, description FROM polar_demo ORDER BY id",
+    "description": "查询风向玫瑰图和月份销售极坐标数据"
+  }'
+```
+
+### 3. 创建极坐标图
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "风向玫瑰极坐标图",
+    "queryId": 1,
+    "type": "polar",
+    "config": "{\n      \"angleField\": \"angle\",\n      \"valueField\": \"value\",\n      \"seriesField\": \"category\",\n      \"descriptionField\": \"description\",\n      \"title\": \"风向玫瑰极坐标图\",\n      \"legend\": true,\n      \"color\": [\"#1890ff\", \"#f5222d\", \"#2fc25b\"],\n      \"tooltip\": true\n    }",
+    "description": "展示风向和月份销售的极坐标分布"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 1,
+    "name": "风向玫瑰极坐标图",
+    "queryId": 1,
+    "type": "polar",
+    "config": "{\"angleField\":\"angle\",\"valueField\":\"value\",\"seriesField\":\"category\",\"descriptionField\":\"description\",\"title\":\"风向玫瑰极坐标图\",\"legend\":true,\"color\":[\"#1890ff\",\"#f5222d\",\"#2fc25b\"],\"tooltip\":true}",
+    "description": "展示风向和月份销售的极坐标分布",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+### 4. 获取极坐标图数据
+```bash
+curl -X GET "http://localhost:8080/api/charts/1/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 1,
+      "name": "风向玫瑰极坐标图",
+      "type": "polar",
+      "config": {
+        "angleField": "angle",
+        "valueField": "value",
+        "seriesField": "category",
+        "descriptionField": "description",
+        "title": "风向玫瑰极坐标图",
+        "legend": true,
+        "color": ["#1890ff", "#f5222d", "#2fc25b"],
+        "tooltip": true
+      }
+    },
+    "data": [
+      { "angle": "N", "value": 120, "category": "风速", "description": "北风" },
+      { "angle": "NE", "value": 150, "category": "风速", "description": "东北风" },
+      { "angle": "E", "value": 180, "category": "风速", "description": "东风" },
+      { "angle": "SE", "value": 90, "category": "风速", "description": "东南风" },
+      { "angle": "S", "value": 60, "category": "风速", "description": "南风" },
+      { "angle": "SW", "value": 80, "category": "风速", "description": "西南风" },
+      { "angle": "W", "value": 110, "category": "风速", "description": "西风" },
+      { "angle": "NW", "value": 100, "category": "风速", "description": "西北风" }
     ]
   },
   "message": "Chart data retrieved successfully"

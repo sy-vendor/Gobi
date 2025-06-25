@@ -148,6 +148,7 @@ POST /webhooks/reports
 | Word Cloud charts | ✅ | ❌ | ✅ |
 | Graph charts | ✅ | ❌ | ✅ |
 | Waterfall charts | ✅ | ❌ | ✅ |
+| Polar charts | ✅ | ❌ | ✅ |
 
 ---
 
@@ -295,6 +296,7 @@ Supported chart types:
 - Word Cloud charts
 - Graph/Network/Force-directed charts
 - Waterfall charts
+- Polar charts
 
 ---
 

@@ -149,6 +149,7 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"wordcloud":   true,
 		"graph":       true,
 		"waterfall":   true,
+		"polar":       true,
 	}
 
 	if !validChartTypes[chartType] {
