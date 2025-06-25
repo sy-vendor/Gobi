@@ -147,6 +147,7 @@ POST /webhooks/reports
 | Candlestick charts | ✅ | ❌ | ✅ |
 | Word Cloud charts | ✅ | ❌ | ✅ |
 | Graph charts | ✅ | ❌ | ✅ |
+| Waterfall charts | ✅ | ❌ | ✅ |
 
 ---
 
@@ -293,6 +294,7 @@ Supported chart types:
 - Candlestick charts (K-line/Stock charts)
 - Word Cloud charts
 - Graph/Network/Force-directed charts
+- Waterfall charts
 
 ---
 

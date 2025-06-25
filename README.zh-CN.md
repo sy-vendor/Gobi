@@ -147,6 +147,7 @@ POST /webhooks/reports
 | K线图 | ✅ | ❌ | ✅ |
 | 词云图 | ✅ | ❌ | ✅ |
 | 关系图 | ✅ | ❌ | ✅ |
+| 瀑布图 | ✅ | ❌ | ✅ |
 
 ---
 
@@ -287,6 +288,7 @@ default:
 - K线图/蜡烛图（Candlestick）
 - 词云图（Word Cloud）
 - 关系图/力导向图（Graph/Network/Force-directed）
+- 瀑布图
 
 ---
 

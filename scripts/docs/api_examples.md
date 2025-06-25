@@ -21,6 +21,7 @@
 - [K线图/蜡烛图 (Candlestick Chart)](#k线图蜡烛图-candlestick-chart)
 - [词云图 (Word Cloud)](#词云图-word-cloud)
 - [关系图/力导向图 (Graph/Network/Force-directed)](#关系图力导向图-graphnetworkforce-directed)
+- [瀑布图 (Waterfall Chart)](#瀑布图-waterfall-chart)
 
 ## 🔐 认证
 
@@ -2116,3 +2117,105 @@ curl -X POST "http://localhost:8080/api/charts" \
 **数据格式要求**:
 - 节点表需包含 id、name、group_id、value、category 等字段
 - 边表需包含 source、target、weight、relation 等字段
+
+---
+
+## 🪜 瀑布图 (Waterfall Chart)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "财务数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含利润拆解数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "利润拆解查询",
+    "dataSourceId": 1,
+    "sql": "SELECT step, amount, type, description FROM waterfall_demo ORDER BY id",
+    "description": "查询利润拆解的各步骤数据"
+  }'
+```
+
+### 3. 创建瀑布图
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "年度利润瀑布图",
+    "queryId": 1,
+    "type": "waterfall",
+    "config": "{\n      \"xField\": \"step\",\n      \"yField\": \"amount\",\n      \"typeField\": \"type\",\n      \"descriptionField\": \"description\",\n      \"title\": \"年度利润拆解\",\n      \"legend\": true,\n      \"color\": [\"#1890ff\", \"#f5222d\", \"#2fc25b\"],\n      \"tooltip\": true\n    }",
+    "description": "展示年度利润的各项增减变化"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 1,
+    "name": "年度利润瀑布图",
+    "queryId": 1,
+    "type": "waterfall",
+    "config": "{\"xField\":\"step\",\"yField\":\"amount\",\"typeField\":\"type\",\"descriptionField\":\"description\",\"title\":\"年度利润拆解\",\"legend\":true,\"color\":[\"#1890ff\",\"#f5222d\",\"#2fc25b\"],\"tooltip\":true}",
+    "description": "展示年度利润的各项增减变化",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+### 4. 获取瀑布图数据
+```bash
+curl -X GET "http://localhost:8080/api/charts/1/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 1,
+      "name": "年度利润瀑布图",
+      "type": "waterfall",
+      "config": {
+        "xField": "step",
+        "yField": "amount",
+        "typeField": "type",
+        "descriptionField": "description",
+        "title": "年度利润拆解",
+        "legend": true,
+        "color": ["#1890ff", "#f5222d", "#2fc25b"],
+        "tooltip": true
+      }
+    },
+    "data": [
+      { "step": "期初余额", "amount": 1000, "type": "base", "description": "年初资金" },
+      { "step": "主营业务收入", "amount": 2000, "type": "increase", "description": "主营业务带来的收入" },
+      { "step": "其他收入", "amount": 500, "type": "increase", "description": "其他来源收入" },
+      { "step": "运营成本", "amount": -1200, "type": "decrease", "description": "日常运营支出" },
+      { "step": "税费", "amount": -300, "type": "decrease", "description": "税收及附加" },
+      { "step": "净利润", "amount": 2000, "type": "base", "description": "年末净利润" }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
