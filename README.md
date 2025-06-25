@@ -267,6 +267,7 @@ default:
 TreeMap (rectangular, area-based): shows hierarchy using nested rectangles, area represents value.
 Tree Diagram: shows hierarchy using nodes and branches (parent-child), like org charts or family trees.
 Box Plot: shows distribution of data based on five-number summary.
+Word Cloud: shows text data visualization where font size represents word frequency or importance.
 
 Supported chart types:
 - Bar charts
@@ -287,6 +288,7 @@ Supported chart types:
 - Tree Diagram
 - Box Plot charts
 - Candlestick charts (K-line/Stock charts)
+- Word Cloud charts
 
 ---
 

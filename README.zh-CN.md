@@ -283,6 +283,7 @@ default:
 - 树形图（Tree Diagram）
 - 箱线图（Box Plot）
 - K线图/蜡烛图（Candlestick）
+- 词云图（Word Cloud）
 
 ---
 
@@ -292,6 +293,7 @@ default:
 - 树形图（Tree Diagram）：用节点和连线表达层级关系，适合组织架构、家谱等分支结构。
 - 箱线图（Box Plot）：用箱线图表示数据分布和五数概括，适合数据分析。
 - K线图/蜡烛图（Candlestick）：用于股票/金融数据的可视化。
+- 词云图（Word Cloud）：用字体大小表示词语频率或重要性，适合文本数据可视化。
 
 ---
 
