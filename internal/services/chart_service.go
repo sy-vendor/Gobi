@@ -146,6 +146,7 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"tree":        true,
 		"boxplot":     true,
 		"candlestick": true,
+		"wordcloud":   true,
 	}
 
 	if !validChartTypes[chartType] {

@@ -19,6 +19,7 @@
 - [树形图 (Tree Diagram)](#树形图-tree-diagram)
 - [箱线图 (Box Plot)](#箱线图-box-plot)
 - [K线图/蜡烛图 (Candlestick Chart)](#k线图蜡烛图-candlestick-chart)
+- [词云图 (Word Cloud)](#词云图-word-cloud)
 
 ## 🔐 认证
 
@@ -1727,5 +1728,310 @@ curl -X POST "http://localhost:8080/api/charts" \
   "message": "Chart created successfully"
 }
 ```
+
+---
+
+## ☁️ 词云图 (Word Cloud)
+
+### 1. 创建数据源
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "词云数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含社交媒体话题、新闻关键词和产品评论关键词的SQLite数据源"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 50,
+    "name": "词云数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含社交媒体话题、新闻关键词和产品评论关键词的SQLite数据源",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Data source created successfully"
+}
+```
+
+### 2. 创建社交媒体话题查询
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "社交媒体热门话题",
+    "dataSourceId": 50,
+    "sql": "SELECT topic as word, frequency as value, category, sentiment FROM social_media_topics ORDER BY frequency DESC LIMIT 30",
+    "description": "查询社交媒体热门话题及其频率"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 50,
+    "name": "社交媒体热门话题",
+    "dataSourceId": 50,
+    "sql": "SELECT topic as word, frequency as value, category, sentiment FROM social_media_topics ORDER BY frequency DESC LIMIT 30",
+    "description": "查询社交媒体热门话题及其频率",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Query created successfully"
+}
+```
+
+### 3. 创建社交媒体话题词云
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "社交媒体热门话题词云",
+    "queryId": 50,
+    "type": "wordcloud",
+    "config": "{
+      \"wordField\": \"word\",
+      \"weightField\": \"value\",
+      \"colorField\": \"category\",
+      \"title\": \"社交媒体热门话题词云\",
+      \"subtitle\": \"基于话题频率和分类\",
+      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\", \"#f5222d\", \"#722ed1\"],
+      \"fontSize\": [12, 60],
+      \"rotation\": [-90, 90],
+      \"spiral\": \"archimedean\",
+      \"shape\": \"circle\",
+      \"tooltip\": true,
+      \"legend\": true
+    }",
+    "description": "展示社交媒体热门话题的词云图，字体大小表示话题热度"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 50,
+    "name": "社交媒体热门话题词云",
+    "queryId": 50,
+    "type": "wordcloud",
+    "config": "{\"wordField\":\"word\",\"weightField\":\"value\",\"colorField\":\"category\",\"title\":\"社交媒体热门话题词云\",\"subtitle\":\"基于话题频率和分类\",\"color\":[\"#1890ff\",\"#2fc25b\",\"#facc14\",\"#f5222d\",\"#722ed1\"],\"fontSize\":[12,60],\"rotation\":[-90,90],\"spiral\":\"archimedean\",\"shape\":\"circle\",\"tooltip\":true,\"legend\":true}",
+    "description": "展示社交媒体热门话题的词云图，字体大小表示话题热度",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+### 4. 创建新闻关键词词云
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "新闻关键词统计",
+    "dataSourceId": 50,
+    "sql": "SELECT keyword as word, frequency as value, source, date FROM news_keywords ORDER BY frequency DESC LIMIT 25",
+    "description": "查询新闻关键词及其出现频率"
+  }'
+```
+
+**创建新闻关键词词云**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "新闻关键词词云",
+    "queryId": 51,
+    "type": "wordcloud",
+    "config": "{
+      \"wordField\": \"word\",
+      \"weightField\": \"value\",
+      \"colorField\": \"source\",
+      \"title\": \"新闻关键词词云\",
+      \"subtitle\": \"基于关键词出现频率\",
+      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\"],
+      \"fontSize\": [14, 50],
+      \"rotation\": [-45, 45],
+      \"spiral\": \"rectangular\",
+      \"shape\": \"diamond\",
+      \"tooltip\": true,
+      \"legend\": true
+    }",
+    "description": "展示新闻关键词的词云图，字体大小表示关键词重要性"
+  }'
+```
+
+### 5. 创建产品评论词云
+
+**请求**:
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品正面评价关键词",
+    "dataSourceId": 50,
+    "sql": "SELECT keyword as word, frequency as value, product_category FROM product_review_keywords WHERE sentiment = \"positive\" ORDER BY frequency DESC LIMIT 20",
+    "description": "查询产品正面评价关键词"
+  }'
+```
+
+**创建产品正面评价词云**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "产品正面评价词云",
+    "queryId": 52,
+    "type": "wordcloud",
+    "config": "{
+      \"wordField\": \"word\",
+      \"weightField\": \"value\",
+      \"colorField\": \"product_category\",
+      \"title\": \"产品正面评价词云\",
+      \"subtitle\": \"基于评价关键词频率\",
+      \"color\": [\"#52c41a\", \"#1890ff\", \"#722ed1\"],
+      \"fontSize\": [16, 48],
+      \"rotation\": [0, 0],
+      \"spiral\": \"archimedean\",
+      \"shape\": \"circle\",
+      \"tooltip\": true,
+      \"legend\": true
+    }",
+    "description": "展示产品正面评价关键词的词云图"
+  }'
+```
+
+### 6. 获取词云图数据
+
+**请求**:
+```bash
+curl -X GET "http://localhost:8080/api/charts/50/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 50,
+      "name": "社交媒体热门话题词云",
+      "type": "wordcloud",
+      "config": {
+        "wordField": "word",
+        "weightField": "value",
+        "colorField": "category",
+        "title": "社交媒体热门话题词云",
+        "subtitle": "基于话题频率和分类",
+        "color": ["#1890ff", "#2fc25b", "#facc14", "#f5222d", "#722ed1"],
+        "fontSize": [12, 60],
+        "rotation": [-90, 90],
+        "spiral": "archimedean",
+        "shape": "circle",
+        "tooltip": true,
+        "legend": true
+      }
+    },
+    "data": [
+      {
+        "word": "人工智能",
+        "value": 1250,
+        "category": "科技",
+        "sentiment": "positive"
+      },
+      {
+        "word": "大数据",
+        "value": 1100,
+        "category": "科技",
+        "sentiment": "positive"
+      },
+      {
+        "word": "心理健康",
+        "value": 1200,
+        "category": "健康",
+        "sentiment": "positive"
+      },
+      {
+        "word": "在线教育",
+        "value": 1100,
+        "category": "教育",
+        "sentiment": "positive"
+      },
+      {
+        "word": "数字化转型",
+        "value": 890,
+        "category": "商业",
+        "sentiment": "positive"
+      }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
+
+---
+
+## 📝 词云图配置参数说明
+
+### 基本配置
+- `wordField`: 词语字段名（必填）
+- `weightField`: 权重字段名，决定字体大小（必填）
+- `colorField`: 颜色字段名，用于分类着色
+- `title`: 图表标题
+- `subtitle`: 图表副标题
+
+### 样式配置
+- `fontSize`: 字体大小范围 [最小值, 最大值]
+- `rotation`: 旋转角度范围 [最小值, 最大值]
+- `spiral`: 螺旋排列方式
+  - `archimedean`: 阿基米德螺旋（圆形）
+  - `rectangular`: 矩形螺旋
+- `shape`: 词云形状
+  - `circle`: 圆形
+  - `diamond`: 菱形
+  - `triangle`: 三角形
+  - `star`: 星形
+- `color`: 颜色数组，用于不同分类的着色
+
+### 交互配置
+- `tooltip`: 是否显示提示框（true/false）
+- `legend`: 是否显示图例（true/false）
+
+### 数据格式要求
+词云图数据需要包含以下字段：
+- 词语字段：包含要显示的词语
+- 权重字段：数值类型，决定字体大小
+- 颜色字段：可选，用于分类着色
 
 *最后更新：2025年6月* 
