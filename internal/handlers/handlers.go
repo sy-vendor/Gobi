@@ -357,6 +357,7 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"boxplot":     true,
 		"candlestick": true,
 		"wordcloud":   true,
+		"graph":       true,
 	}
 
 	if !validChartTypes[req.Type] {
