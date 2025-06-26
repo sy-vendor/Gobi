@@ -25,6 +25,7 @@
 - [极坐标图 (Polar Chart)](#极坐标图-polar-chart)
 - [甘特图 (Gantt Chart)](#甘特图-gantt-chart)
 - [玫瑰图 (Rose Chart)](#玫瑰图-rose-chart)
+- [地图图表 (Geo/Map/Choropleth)](#地图图表-geomapchoropleth)
 
 ## 🔐 认证
 
@@ -2661,5 +2662,246 @@ curl -X DELETE "http://localhost:8080/api/charts/1" \
 3. **用户行为** - 展示用户在不同时段的活跃度
 4. **资源分配** - 显示各部门或项目的资源分配情况
 5. **性能对比** - 比较不同指标或维度的性能数据
+
+*最后更新：2025年6月*
+
+---
+
+## 🗺️ 地图图表 (Geo/Map/Choropleth)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "地图数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含中国省份、世界国家、城市等地理数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "中国省份GDP查询",
+    "dataSourceId": 1,
+    "sql": "SELECT region, value, longitude, latitude, category, description FROM geo_demo WHERE category = 'GDP' ORDER BY value DESC",
+    "description": "查询中国省份GDP数据"
+  }'
+```
+
+### 3. 创建地图图表
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "中国省份GDP地图",
+    "queryId": 1,
+    "type": "choropleth",
+    "config": "{\n      \"regionField\": \"region\",\n      \"valueField\": \"value\",\n      \"longitudeField\": \"longitude\",\n      \"latitudeField\": \"latitude\",\n      \"categoryField\": \"category\",\n      \"descriptionField\": \"description\",\n      \"title\": \"中国省份GDP分布图\",\n      \"subtitle\": \"GDP distribution by province\",\n      \"mapType\": \"china\",\n      \"visualMap\": true,\n      \"legend\": true,\n      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\", \"#f5222d\"],\n      \"tooltip\": true\n    }",
+    "description": "展示中国各省份GDP分布情况"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 1,
+    "name": "中国省份GDP地图",
+    "queryId": 1,
+    "type": "choropleth",
+    "config": "{\"regionField\":\"region\",\"valueField\":\"value\",\"longitudeField\":\"longitude\",\"latitudeField\":\"latitude\",\"categoryField\":\"category\",\"descriptionField\":\"description\",\"title\":\"中国省份GDP分布图\",\"subtitle\":\"GDP distribution by province\",\"mapType\":\"china\",\"visualMap\":true,\"legend\":true,\"color\":[\"#1890ff\",\"#2fc25b\",\"#facc14\",\"#f5222d\"],\"tooltip\":true}",
+    "description": "展示中国各省份GDP分布情况",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+### 4. 获取地图数据
+```bash
+curl -X GET "http://localhost:8080/api/charts/1/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 1,
+      "name": "中国省份GDP地图",
+      "type": "choropleth",
+      "config": {
+        "regionField": "region",
+        "valueField": "value",
+        "longitudeField": "longitude",
+        "latitudeField": "latitude",
+        "categoryField": "category",
+        "descriptionField": "description",
+        "title": "中国省份GDP分布图",
+        "subtitle": "GDP distribution by province",
+        "mapType": "china",
+        "visualMap": true,
+        "legend": true,
+        "color": ["#1890ff", "#2fc25b", "#facc14", "#f5222d"],
+        "tooltip": true
+      }
+    },
+    "data": [
+      { "region": "广东", "value": 110760.9, "longitude": 113.2806, "latitude": 23.1252, "category": "GDP", "description": "广东省GDP（亿元）" },
+      { "region": "江苏", "value": 102719.0, "longitude": 118.7674, "latitude": 32.0415, "category": "GDP", "description": "江苏省GDP（亿元）" },
+      { "region": "山东", "value": 73129.0, "longitude": 117.0009, "latitude": 36.6512, "category": "GDP", "description": "山东省GDP（亿元）" },
+      { "region": "浙江", "value": 64613.0, "longitude": 120.1551, "latitude": 30.2741, "category": "GDP", "description": "浙江省GDP（亿元）" },
+      { "region": "河南", "value": 54997.1, "longitude": 113.6654, "latitude": 34.7579, "category": "GDP", "description": "河南省GDP（亿元）" }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
+
+### 5. 创建世界国家人口地图示例
+
+**创建查询**:
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "世界国家人口查询",
+    "dataSourceId": 1,
+    "sql": "SELECT region, value, longitude, latitude, category, description FROM geo_demo WHERE category = 'Population' ORDER BY value DESC",
+    "description": "查询世界国家人口数据"
+  }'
+```
+
+**创建图表**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "世界国家人口地图",
+    "queryId": 2,
+    "type": "map",
+    "config": "{\n      \"regionField\": \"region\",\n      \"valueField\": \"value\",\n      \"longitudeField\": \"longitude\",\n      \"latitudeField\": \"latitude\",\n      \"categoryField\": \"category\",\n      \"descriptionField\": \"description\",\n      \"title\": \"世界国家人口分布图\",\n      \"subtitle\": \"Population distribution by country\",\n      \"mapType\": \"world\",\n      \"visualMap\": true,\n      \"legend\": true,\n      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\", \"#f5222d\", \"#722ed1\"],\n      \"tooltip\": true\n    }",
+    "description": "展示世界各国人口分布情况"
+  }'
+```
+
+### 6. 创建中国城市空气质量地图示例
+
+**创建查询**:
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "中国城市空气质量查询",
+    "dataSourceId": 1,
+    "sql": "SELECT region, value, longitude, latitude, category, description FROM geo_demo WHERE category = 'AQI' ORDER BY value ASC",
+    "description": "查询中国城市空气质量数据"
+  }'
+```
+
+**创建图表**:
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "中国城市空气质量地图",
+    "queryId": 3,
+    "type": "geo",
+    "config": "{\n      \"regionField\": \"region\",\n      \"valueField\": \"value\",\n      \"longitudeField\": \"longitude\",\n      \"latitudeField\": \"latitude\",\n      \"categoryField\": \"category\",\n      \"descriptionField\": \"description\",\n      \"title\": \"中国城市空气质量分布图\",\n      \"subtitle\": \"Air quality index by city\",\n      \"mapType\": \"china\",\n      \"visualMap\": true,\n      \"legend\": true,\n      \"color\": [\"#2fc25b\", \"#facc14\", \"#fa8c16\", \"#f5222d\"],\n      \"tooltip\": true,\n      \"symbolSize\": 10\n    }",
+    "description": "展示中国主要城市空气质量分布"
+  }'
+```
+
+### 7. 更新地图图表
+```bash
+curl -X PUT "http://localhost:8080/api/charts/1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "更新后的中国省份GDP地图",
+    "config": "{\n      \"regionField\": \"region\",\n      \"valueField\": \"value\",\n      \"longitudeField\": \"longitude\",\n      \"latitudeField\": \"latitude\",\n      \"categoryField\": \"category\",\n      \"descriptionField\": \"description\",\n      \"title\": \"更新后的中国省份GDP分布图\",\n      \"subtitle\": \"Updated GDP distribution by province\",\n      \"mapType\": \"china\",\n      \"visualMap\": true,\n      \"legend\": true,\n      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\", \"#f5222d\", \"#722ed1\"],\n      \"tooltip\": true\n    }"
+  }'
+```
+
+### 8. 删除地图图表
+```bash
+curl -X DELETE "http://localhost:8080/api/charts/1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+## 🗺️ 地图图表配置参数说明
+
+### 基本配置
+- `regionField`: 地区字段名（必填）
+- `valueField`: 数值字段名，决定颜色深浅（必填）
+- `longitudeField`: 经度字段名，用于散点图
+- `latitudeField`: 纬度字段名，用于散点图
+- `categoryField`: 分类字段名，用于分组
+- `descriptionField`: 说明字段名，用于提示信息
+- `title`: 图表标题
+- `subtitle`: 图表副标题
+
+### 地图配置
+- `mapType`: 地图类型
+  - `china`: 中国地图
+  - `world`: 世界地图
+  - `province`: 省份地图
+  - `city`: 城市地图
+- `visualMap`: 是否显示视觉映射组件（true/false）
+- `legend`: 是否显示图例（true/false）
+- `color`: 颜色数组，用于不同数值范围的着色
+
+### 样式配置
+- `symbolSize`: 散点大小（用于散点图）
+- `itemStyle`: 区域样式
+  - `borderColor`: 边框颜色
+  - `borderWidth`: 边框宽度
+  - `areaColor`: 区域颜色
+- `emphasis`: 高亮样式
+  - `itemStyle`: 高亮时的区域样式
+
+### 交互配置
+- `tooltip`: 是否显示提示框（true/false）
+- `zoom`: 是否允许缩放（true/false）
+- `roam`: 是否允许拖拽（true/false）
+- `label`: 标签配置
+  - `show`: 是否显示标签
+  - `position`: 标签位置
+  - `formatter`: 标签格式
+
+### 数据格式要求
+地图图表数据需要包含以下字段：
+- 地区字段：包含要显示的地区名称
+- 数值字段：数值类型，决定颜色深浅
+- 经纬度字段：可选，用于散点图定位
+- 分类字段：可选，用于分组显示
+- 说明字段：可选，用于提示信息
+
+### 使用场景
+1. **地理分布** - 显示不同地区的数值分布
+2. **人口统计** - 展示人口密度和分布
+3. **经济指标** - 显示GDP、收入等经济数据
+4. **环境监测** - 展示空气质量、温度等环境数据
+5. **销售分析** - 显示各地区销售业绩
+6. **疫情监控** - 展示疫情传播和分布情况
 
 *最后更新：2025年6月*
