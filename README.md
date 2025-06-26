@@ -149,6 +149,7 @@ POST /webhooks/reports
 | Graph charts | ✅ | ❌ | ✅ |
 | Waterfall charts | ✅ | ❌ | ✅ |
 | Polar charts | ✅ | ❌ | ✅ |
+| Gantt charts | ✅ | ❌ | ✅ |
 
 ---
 
@@ -297,6 +298,7 @@ Supported chart types:
 - Graph/Network/Force-directed charts
 - Waterfall charts
 - Polar charts
+- Gantt charts
 
 ---
 

@@ -360,6 +360,7 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"graph":       true,
 		"waterfall":   true,
 		"polar":       true,
+		"gantt":       true,
 	}
 
 	if !validChartTypes[req.Type] {
