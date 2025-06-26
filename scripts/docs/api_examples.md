@@ -26,6 +26,7 @@
 - [甘特图 (Gantt Chart)](#甘特图-gantt-chart)
 - [玫瑰图 (Rose Chart)](#玫瑰图-rose-chart)
 - [地图图表 (Geo/Map/Choropleth)](#地图图表-geomapchoropleth)
+- [进度条/环形进度图 (Progress/Circular Progress)](#进度条环形进度图-progresscircular-progress)
 
 ## 🔐 认证
 
@@ -2903,5 +2904,160 @@ curl -X DELETE "http://localhost:8080/api/charts/1" \
 4. **环境监测** - 展示空气质量、温度等环境数据
 5. **销售分析** - 显示各地区销售业绩
 6. **疫情监控** - 展示疫情传播和分布情况
+
+*最后更新：2025年6月*
+
+---
+
+## ⏳ 进度条/环形进度图 (Progress/Circular Progress)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "进度数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含任务进度、项目完成率等进度数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "任务进度查询",
+    "dataSourceId": 1,
+    "sql": "SELECT name, value, category, color, description FROM progress_demo ORDER BY id",
+    "description": "查询任务进度数据"
+  }'
+```
+
+### 3. 创建进度条图表
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "项目任务进度条",
+    "queryId": 1,
+    "type": "progress",
+    "config": "{\n      \"nameField\": \"name\",\n      \"valueField\": \"value\",\n      \"categoryField\": \"category\",\n      \"colorField\": \"color\",\n      \"descriptionField\": \"description\",\n      \"title\": \"项目任务进度条\",\n      \"subtitle\": \"各阶段进度\",\n      \"max\": 100,\n      \"showLabel\": true,\n      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\", \"#f5222d\"],\n      \"tooltip\": true\n    }",
+    "description": "展示项目各阶段任务进度"
+  }'
+```
+
+### 4. 创建环形进度图表
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "项目完成率环形进度图",
+    "queryId": 1,
+    "type": "circular-progress",
+    "config": "{\n      \"nameField\": \"name\",\n      \"valueField\": \"value\",\n      \"categoryField\": \"category\",\n      \"colorField\": \"color\",\n      \"descriptionField\": \"description\",\n      \"title\": \"项目完成率\",\n      \"subtitle\": \"年度项目进度\",\n      \"max\": 100,\n      \"radius\": [\"70%\", \"90%\"],\n      \"showLabel\": true,\n      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\", \"#f5222d\"],\n      \"tooltip\": true\n    }",
+    "description": "展示项目完成率环形进度"
+  }'
+```
+
+### 5. 获取进度图数据
+```bash
+curl -X GET "http://localhost:8080/api/charts/1/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 1,
+      "name": "项目任务进度条",
+      "type": "progress",
+      "config": {
+        "nameField": "name",
+        "valueField": "value",
+        "categoryField": "category",
+        "colorField": "color",
+        "descriptionField": "description",
+        "title": "项目任务进度条",
+        "subtitle": "各阶段进度",
+        "max": 100,
+        "showLabel": true,
+        "color": ["#1890ff", "#2fc25b", "#facc14", "#f5222d"],
+        "tooltip": true
+      }
+    },
+    "data": [
+      { "name": "需求分析", "value": 100, "category": "项目A", "color": "#1890ff", "description": "需求分析已完成" },
+      { "name": "设计", "value": 80, "category": "项目A", "color": "#2fc25b", "description": "设计阶段进行中" },
+      { "name": "开发", "value": 60, "category": "项目A", "color": "#facc14", "description": "开发阶段进行中" }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
+
+### 6. 更新进度图表
+```bash
+curl -X PUT "http://localhost:8080/api/charts/1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "更新后的项目任务进度条",
+    "config": "{\n      \"nameField\": \"name\",\n      \"valueField\": \"value\",\n      \"categoryField\": \"category\",\n      \"colorField\": \"color\",\n      \"descriptionField\": \"description\",\n      \"title\": \"更新后的项目任务进度条\",\n      \"subtitle\": \"Updated progress\",\n      \"max\": 100,\n      \"showLabel\": true,\n      \"color\": [\"#1890ff\", \"#2fc25b\", \"#facc14\", \"#f5222d\"],\n      \"tooltip\": true\n    }"
+  }'
+```
+
+### 7. 删除进度图表
+```bash
+curl -X DELETE "http://localhost:8080/api/charts/1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+## ⏳ 进度条/环形进度图配置参数说明
+
+### 基本配置
+- `nameField`: 名称字段名（必填）
+- `valueField`: 进度百分比字段名（必填）
+- `categoryField`: 分类字段名
+- `colorField`: 颜色字段名
+- `descriptionField`: 说明字段名
+- `title`: 图表标题
+- `subtitle`: 图表副标题
+- `max`: 最大值（默认100）
+
+### 样式配置
+- `showLabel`: 是否显示标签（true/false）
+- `color`: 颜色数组，用于不同分类的着色
+- `radius`: 环形进度图的内外半径（如["70%", "90%"]）
+- `barWidth`: 进度条宽度
+- `backgroundColor`: 背景色
+
+### 交互配置
+- `tooltip`: 是否显示提示框（true/false）
+
+### 数据格式要求
+进度图数据需要包含以下字段：
+- 名称字段：如任务、项目、目标名称
+- 进度百分比字段：数值类型，0-100
+- 分类字段：可选，用于分组
+- 颜色字段：可选，用于分类着色
+- 说明字段：可选，用于提示信息
+
+### 使用场景
+1. **任务进度** - 展示各任务或阶段的完成进度
+2. **项目完成率** - 展示项目整体进度
+3. **销售目标** - 展示销售目标完成情况
+4. **KPI指标** - 展示关键绩效指标进度
+5. **环形进度** - 展示单项或多项进度的环形可视化
 
 *最后更新：2025年6月*
