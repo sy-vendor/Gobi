@@ -362,6 +362,8 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"polar":       true,
 		"gantt":       true,
 		"rose":        true,
+		"geo":         true,
+		"map":         true,
 		"choropleth":  true,
 	}
 
