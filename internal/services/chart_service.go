@@ -152,6 +152,8 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"polar":       true,
 		"gantt":       true,
 		"rose":        true,
+		"geo":         true,
+		"map":         true,
 		"choropleth":  true,
 	}
 
