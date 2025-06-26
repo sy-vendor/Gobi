@@ -152,6 +152,7 @@ POST /webhooks/reports
 | Gantt charts | ✅ | ❌ | ✅ |
 | Rose charts | ✅ | ❌ | ✅ |
 | Geo/Map/Choropleth charts | ✅ | ❌ | ✅ |
+| Progress/Circular Progress charts | ✅ | ❌ | ✅ |
 
 ---
 
@@ -303,6 +304,7 @@ Supported chart types:
 - Gantt charts
 - Rose charts
 - Geo/Map/Choropleth charts
+- Progress/Circular Progress charts
 
 ---
 
