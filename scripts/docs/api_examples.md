@@ -24,6 +24,7 @@
 - [瀑布图 (Waterfall Chart)](#瀑布图-waterfall-chart)
 - [极坐标图 (Polar Chart)](#极坐标图-polar-chart)
 - [甘特图 (Gantt Chart)](#甘特图-gantt-chart)
+- [玫瑰图 (Rose Chart)](#玫瑰图-rose-chart)
 
 ## 🔐 认证
 
@@ -2430,3 +2431,262 @@ curl -X GET "http://localhost:8080/api/charts/1/data" \
   "message": "Chart data retrieved successfully"
 }
 ```
+
+---
+
+## 🌹 玫瑰图 (Rose Chart)
+
+### Create Rose Chart | 创建玫瑰图
+
+```bash
+curl -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "name": "Wind Rose Chart",
+    "type": "rose",
+    "config": {
+      "title": "Wind Direction Analysis",
+      "subtitle": "Wind frequency by direction",
+      "radius": "60%",
+      "center": ["50%", "50%"],
+      "itemStyle": {
+        "borderRadius": 8,
+        "borderColor": "#fff"
+      },
+      "label": {
+        "show": true,
+        "position": "outside"
+      },
+      "emphasis": {
+        "itemStyle": {
+          "shadowBlur": 10,
+          "shadowOffsetX": 0,
+          "shadowColor": "rgba(0, 0, 0, 0.5)"
+        }
+      }
+    },
+    "data": {
+      "query": "SELECT category, value, angle, color, description FROM rose_demo WHERE category IN ('N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW') ORDER BY category",
+      "datasource_id": 1
+    }
+  }'
+```
+
+### Create Monthly Sales Rose Chart | 创建月度销售玫瑰图
+
+```bash
+curl -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "name": "Monthly Sales Rose",
+    "type": "rose",
+    "config": {
+      "title": "Monthly Sales Performance",
+      "subtitle": "Sales data by month",
+      "radius": ["30%", "75%"],
+      "center": ["50%", "50%"],
+      "roseType": "area",
+      "itemStyle": {
+        "borderRadius": 5
+      },
+      "label": {
+        "show": true,
+        "formatter": "{b}: {c}"
+      },
+      "tooltip": {
+        "trigger": "item",
+        "formatter": "{a} <br/>{b}: {c} ({d}%)"
+      }
+    },
+    "data": {
+      "query": "SELECT category, value, angle, color, description FROM rose_demo WHERE category LIKE '%月' ORDER BY CAST(REPLACE(category, '月', '') AS INTEGER)",
+      "datasource_id": 1
+    }
+  }'
+```
+
+### Create User Activity Rose Chart | 创建用户活跃度玫瑰图
+
+```bash
+curl -X POST http://localhost:8080/api/charts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "name": "User Activity by Time",
+    "type": "rose",
+    "config": {
+      "title": "User Activity Distribution",
+      "subtitle": "Active users by time period",
+      "radius": "50%",
+      "center": ["50%", "50%"],
+      "roseType": "radius",
+      "itemStyle": {
+        "borderRadius": 3,
+        "borderColor": "#fff",
+        "borderWidth": 2
+      },
+      "label": {
+        "show": true,
+        "position": "inside",
+        "formatter": "{c}"
+      },
+      "tooltip": {
+        "trigger": "item",
+        "formatter": "{a} <br/>{b}: {c} users"
+      },
+      "legend": {
+        "orient": "vertical",
+        "left": "left"
+      }
+    },
+    "data": {
+      "query": "SELECT category, value, angle, color, description FROM rose_demo WHERE category LIKE '%:%' ORDER BY value DESC",
+      "datasource_id": 1
+    }
+  }'
+```
+
+### Query Rose Chart Data | 查询玫瑰图数据
+
+```bash
+# Get all rose charts
+curl -X GET http://localhost:8080/api/charts?type=rose \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# Get specific rose chart
+curl -X GET http://localhost:8080/api/charts/CHART_ID \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# Get rose chart data
+curl -X POST http://localhost:8080/api/charts/CHART_ID/data \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "filters": {
+      "category": ["N", "E", "S", "W"]
+    },
+    "sort": {
+      "field": "value",
+      "order": "desc"
+    }
+  }'
+```
+
+### Update Rose Chart | 更新玫瑰图
+
+```bash
+curl -X PUT http://localhost:8080/api/charts/CHART_ID \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "name": "Updated Wind Rose Chart",
+    "config": {
+      "title": "Updated Wind Direction Analysis",
+      "radius": "70%",
+      "itemStyle": {
+        "borderRadius": 10,
+        "borderColor": "#fff",
+        "borderWidth": 2
+      }
+    }
+  }'
+```
+
+### Sample Data Queries | 示例数据查询
+
+```sql
+-- 风向数据查询
+SELECT category, value, angle, color, description 
+FROM rose_demo 
+WHERE category IN ('N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW') 
+ORDER BY category;
+
+-- 月份销售数据查询
+SELECT category, value, angle, color, description 
+FROM rose_demo 
+WHERE category LIKE '%月' 
+ORDER BY CAST(REPLACE(category, '月', '') AS INTEGER);
+
+-- 用户活跃度数据查询
+SELECT category, value, angle, color, description 
+FROM rose_demo 
+WHERE category LIKE '%:%' 
+ORDER BY value DESC;
+
+-- 数据统计查询
+SELECT 
+    COUNT(*) as total_records,
+    AVG(value) as avg_value,
+    MIN(value) as min_value,
+    MAX(value) as max_value
+FROM rose_demo;
+```
+
+### Rose Chart Configuration Options | 玫瑰图配置选项
+
+```json
+{
+  "title": "Chart Title",
+  "subtitle": "Chart Subtitle",
+  "radius": "60%",                    // 半径，可以是百分比或像素
+  "center": ["50%", "50%"],          // 中心位置
+  "roseType": "radius",              // 玫瑰图类型：radius, area
+  "itemStyle": {
+    "borderRadius": 8,               // 圆角半径
+    "borderColor": "#fff",           // 边框颜色
+    "borderWidth": 1                 // 边框宽度
+  },
+  "label": {
+    "show": true,                    // 显示标签
+    "position": "outside",           // 标签位置：inside, outside
+    "formatter": "{b}: {c}"          // 标签格式
+  },
+  "tooltip": {
+    "trigger": "item",               // 触发方式
+    "formatter": "{a} <br/>{b}: {c}" // 提示框格式
+  },
+  "legend": {
+    "orient": "vertical",            // 图例方向
+    "left": "left"                   // 图例位置
+  },
+  "emphasis": {
+    "itemStyle": {
+      "shadowBlur": 10,              // 阴影模糊
+      "shadowOffsetX": 0,            // 阴影偏移
+      "shadowColor": "rgba(0,0,0,0.5)" // 阴影颜色
+    }
+  }
+}
+```
+
+### Data Structure | 数据结构
+
+玫瑰图数据应包含以下字段：
+
+```json
+{
+  "category": "N",           // 类别名称
+  "value": 120,             // 数值
+  "angle": 45,              // 角度（可选）
+  "color": "#1890ff",       // 颜色（可选）
+  "description": "北风"      // 说明（可选）
+}
+```
+
+### Use Cases | 使用场景
+
+1. **风向分析** - 显示不同方向的风频分布
+2. **销售分析** - 按月份、季度等时间维度展示销售数据
+3. **用户行为** - 展示用户在不同时段的活跃度
+4. **资源分配** - 显示各部门或项目的资源分配情况
+5. **性能对比** - 比较不同指标或维度的性能数据
+
+### Tips | 使用技巧
+
+1. **颜色搭配** - 使用对比色或渐变色增强视觉效果
+2. **标签位置** - 根据数据密度调整标签位置避免重叠
+3. **半径设置** - 根据数据量调整半径大小
+4. **交互效果** - 添加悬停高亮和点击事件
+5. **响应式设计** - 确保在不同屏幕尺寸下正常显示

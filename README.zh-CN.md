@@ -150,6 +150,7 @@ POST /webhooks/reports
 | 瀑布图 | ✅ | ❌ | ✅ |
 | 极坐标图 | ✅ | ❌ | ✅ |
 | 甘特图 | ✅ | ❌ | ✅ |
+| 玫瑰图 | ✅ | ❌ | ✅ |
 
 ---
 
@@ -292,6 +293,7 @@ default:
 - 关系图/力导向图（Graph/Network/Force-directed）
 - 瀑布图
 - 甘特图
+- 玫瑰图
 
 ---
 

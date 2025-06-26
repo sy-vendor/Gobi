@@ -361,6 +361,7 @@ func (h *Handler) CreateChart(c *gin.Context) {
 		"waterfall":   true,
 		"polar":       true,
 		"gantt":       true,
+		"rose":        true,
 	}
 
 	if !validChartTypes[req.Type] {

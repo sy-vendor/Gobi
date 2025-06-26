@@ -50,7 +50,7 @@ type Chart struct {
 	UserID      uint
 	User        User
 	Name        string
-	Type        string // bar, line, pie, scatter, radar, heatmap, gauge, funnel, area, 3d-bar, 3d-scatter, 3d-surface, 3d-bubble, treemap, sunburst, tree, boxplot, candlestick, wordcloud, graph, waterfall, polar, gantt
+	Type        string // bar, line, pie, scatter, radar, heatmap, gauge, funnel, area, 3d-bar, 3d-scatter, 3d-surface, 3d-bubble, treemap, sunburst, tree, boxplot, candlestick, wordcloud, graph, waterfall, polar, gantt, rose
 	Config      string // JSON configuration
 	Data        string // JSON data
 	Description string `json:"description"`
