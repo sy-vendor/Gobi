@@ -151,6 +151,7 @@ POST /webhooks/reports
 | Polar charts | ✅ | ❌ | ✅ |
 | Gantt charts | ✅ | ❌ | ✅ |
 | Rose charts | ✅ | ❌ | ✅ |
+| Geo/Map/Choropleth charts | ✅ | ❌ | ✅ |
 
 ---
 
@@ -301,6 +302,7 @@ Supported chart types:
 - Polar charts
 - Gantt charts
 - Rose charts
+- Geo/Map/Choropleth charts
 
 ---
 
