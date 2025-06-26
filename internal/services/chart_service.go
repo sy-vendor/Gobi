@@ -150,6 +150,7 @@ func (s *ChartService) validateChartType(chartType string) error {
 		"graph":       true,
 		"waterfall":   true,
 		"polar":       true,
+		"gantt":       true,
 	}
 
 	if !validChartTypes[chartType] {

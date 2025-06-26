@@ -149,6 +149,7 @@ POST /webhooks/reports
 | 关系图 | ✅ | ❌ | ✅ |
 | 瀑布图 | ✅ | ❌ | ✅ |
 | 极坐标图 | ✅ | ❌ | ✅ |
+| 甘特图 | ✅ | ❌ | ✅ |
 
 ---
 
@@ -290,6 +291,7 @@ default:
 - 词云图（Word Cloud）
 - 关系图/力导向图（Graph/Network/Force-directed）
 - 瀑布图
+- 甘特图
 
 ---
 

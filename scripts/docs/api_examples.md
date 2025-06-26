@@ -23,6 +23,7 @@
 - [关系图/力导向图 (Graph/Network/Force-directed)](#关系图力导向图-graphnetworkforce-directed)
 - [瀑布图 (Waterfall Chart)](#瀑布图-waterfall-chart)
 - [极坐标图 (Polar Chart)](#极坐标图-polar-chart)
+- [甘特图 (Gantt Chart)](#甘特图-gantt-chart)
 
 ## 🔐 认证
 
@@ -2319,6 +2320,111 @@ curl -X GET "http://localhost:8080/api/charts/1/data" \
       { "angle": "SW", "value": 80, "category": "风速", "description": "西南风" },
       { "angle": "W", "value": 110, "category": "风速", "description": "西风" },
       { "angle": "NW", "value": 100, "category": "风速", "description": "西北风" }
+    ]
+  },
+  "message": "Chart data retrieved successfully"
+}
+```
+
+---
+
+## 📅 甘特图 (Gantt Chart)
+
+### 1. 创建数据源
+```bash
+curl -X POST "http://localhost:8080/api/datasources" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "项目管理数据源",
+    "type": "sqlite",
+    "database": "gobi.db",
+    "description": "包含项目进度和任务调度数据的SQLite数据源"
+  }'
+```
+
+### 2. 创建查询
+```bash
+curl -X POST "http://localhost:8080/api/queries" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "项目进度查询",
+    "dataSourceId": 1,
+    "sql": "SELECT task_id, task_name, start_date, end_date, duration, progress, status, assignee, dependencies, project, priority FROM gantt_demo ORDER BY project, start_date",
+    "description": "查询项目进度和任务调度数据"
+  }'
+```
+
+### 3. 创建甘特图
+```bash
+curl -X POST "http://localhost:8080/api/charts" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "项目进度甘特图",
+    "queryId": 1,
+    "type": "gantt",
+    "config": "{\n      \"taskField\": \"task_name\",\n      \"startField\": \"start_date\",\n      \"endField\": \"end_date\",\n      \"durationField\": \"duration\",\n      \"progressField\": \"progress\",\n      \"statusField\": \"status\",\n      \"assigneeField\": \"assignee\",\n      \"dependenciesField\": \"dependencies\",\n      \"projectField\": \"project\",\n      \"priorityField\": \"priority\",\n      \"title\": \"项目进度甘特图\",\n      \"legend\": true,\n      \"color\": [\"#1890ff\", \"#f5222d\", \"#2fc25b\"],\n      \"tooltip\": true\n    }",
+    "description": "展示项目进度和任务调度安排"
+  }'
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "ID": 1,
+    "name": "项目进度甘特图",
+    "queryId": 1,
+    "type": "gantt",
+    "config": "{\"taskField\":\"task_name\",\"startField\":\"start_date\",\"endField\":\"end_date\",\"durationField\":\"duration\",\"progressField\":\"progress\",\"statusField\":\"status\",\"assigneeField\":\"assignee\",\"dependenciesField\":\"dependencies\",\"projectField\":\"project\",\"priorityField\":\"priority\",\"title\":\"项目进度甘特图\",\"legend\":true,\"color\":[\"#1890ff\",\"#f5222d\",\"#2fc25b\"],\"tooltip\":true}",
+    "description": "展示项目进度和任务调度安排",
+    "userID": 1,
+    "createdAt": "2025-06-24T11:50:00Z",
+    "updatedAt": "2025-06-24T11:50:00Z"
+  },
+  "message": "Chart created successfully"
+}
+```
+
+### 4. 获取甘特图数据
+```bash
+curl -X GET "http://localhost:8080/api/charts/1/data" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**返回**:
+```json
+{
+  "success": true,
+  "data": {
+    "chart": {
+      "ID": 1,
+      "name": "项目进度甘特图",
+      "type": "gantt",
+      "config": {
+        "taskField": "task_name",
+        "startField": "start_date",
+        "endField": "end_date",
+        "durationField": "duration",
+        "progressField": "progress",
+        "statusField": "status",
+        "assigneeField": "assignee",
+        "dependenciesField": "dependencies",
+        "projectField": "project",
+        "priorityField": "priority",
+        "title": "项目进度甘特图",
+        "legend": true,
+        "color": ["#1890ff", "#f5222d", "#2fc25b"],
+        "tooltip": true
+      }
+    },
+    "data": [
+      { "task_id": "TASK-001", "task_name": "需求分析", "start_date": "2024-01-01", "end_date": "2024-01-05", "duration": 5, "progress": 100, "status": "已完成", "assignee": "张三", "dependencies": null, "project": "电商平台开发", "priority": "高" },
+      { "task_id": "TASK-002", "task_name": "系统设计", "start_date": "2024-01-06", "end_date": "2024-01-15", "duration": 10, "progress": 80, "status": "进行中", "assignee": "李四", "dependencies": "TASK-001", "project": "电商平台开发", "priority": "高" },
+      { "task_id": "TASK-003", "task_name": "数据库设计", "start_date": "2024-01-08", "end_date": "2024-01-12", "duration": 5, "progress": 100, "status": "已完成", "assignee": "王五", "dependencies": "TASK-001", "project": "电商平台开发", "priority": "中" }
     ]
   },
   "message": "Chart data retrieved successfully"
