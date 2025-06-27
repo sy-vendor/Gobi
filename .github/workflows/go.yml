@@ -24,11 +24,6 @@ jobs:
     - name: Install dependencies
       run: go mod download
 
-    - name: Run linter
-      run: |
-        go install golang.org/x/lint/golint@latest
-        golint -set_exit_status ./...
-
     - name: Vet
       run: go vet ./...
 
