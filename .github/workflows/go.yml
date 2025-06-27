@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  GO_VERSION: '1.23'
+  DOCKER_IMAGE: gobi
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -15,16 +19,33 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.23'
+        go-version: ${{ env.GO_VERSION }}
 
     - name: Install dependencies
       run: go mod download
 
+    - name: Run linter
+      run: |
+        go install golang.org/x/lint/golint@latest
+        golint -set_exit_status ./...
+
     - name: Vet
       run: go vet ./...
 
-    - name: Run tests
+    - name: Run tests with coverage
       run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Run security scan
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
 
   build:
     needs: test
@@ -32,14 +53,64 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23'
+          go-version: ${{ env.GO_VERSION }}
+      
       - name: Build
         run: go build -v -o gobi ./cmd/server
+      
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gobi-binary
-          path: gobi 
+          path: gobi
+
+  docker-build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    needs: [test, docker-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Deploy to staging
+        run: echo "Deploy to staging environment"
+        # Add your staging deployment steps here
+
+  deploy-production:
+    needs: [test, docker-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Deploy to production
+        run: echo "Deploy to production environment"
+        # Add your production deployment steps here 
