@@ -16,6 +16,8 @@ linters:
     - gosec
     - prealloc
     - gocritic
+  disable:
+    - golint
     - revive
 
 linters-settings:
@@ -26,11 +28,6 @@ linters-settings:
       - opinionated
       - performance
       - style
-  revive:
-    rules:
-      - name: exported
-        arguments:
-          - disableStutteringCheck
 
 issues:
   exclude-rules:
