@@ -2,8 +2,8 @@
 FROM golang:1.23-alpine AS builder
 WORKDIR /app
 
-# 安装必要的系统依赖
-RUN apk add --no-cache git ca-certificates tzdata
+# 安装必要的系统依赖（包括 gcc 和 musl-dev 支持 cgo/sqlite3）
+RUN apk add --no-cache git ca-certificates tzdata gcc musl-dev
 
 # 复制依赖文件
 COPY go.mod go.sum ./
