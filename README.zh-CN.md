@@ -31,6 +31,66 @@
 
 ---
 
+## ⚡ 快速开始
+
+### 🚀 一键设置
+```bash
+# 克隆并设置所有内容
+git clone https://github.com/sy-vendor/gobi.git
+cd gobi
+make setup
+
+# 启动开发服务器
+make dev
+
+# 服务器在 http://localhost:8080 启动
+# 默认管理员: admin/admin123
+```
+
+### 🛠️ 开发工具
+
+```bash
+# 查看所有可用命令
+make help
+
+# 开发工作流
+make dev-full          # 格式化、检查、测试、构建
+
+# 测试
+make test              # 运行测试
+make test-coverage     # 运行测试并生成覆盖率报告
+make test-race         # 运行测试并检测竞态条件
+
+# 代码质量
+make lint              # 运行代码检查
+make format            # 格式化代码
+make security-scan     # 安全漏洞扫描
+
+# 数据库
+make migrate           # 运行数据库迁移
+make setup-data        # 设置示例数据
+make test-data         # 测试所有图表数据
+
+# Docker
+make docker-build      # 构建 Docker 镜像
+make docker-run        # 运行 Docker 容器
+
+# 生产环境
+make prod-build        # 生产构建（包含所有检查）
+```
+
+### 📦 Docker 快速开始
+```bash
+# 使用 Docker 构建和运行
+docker build -t gobi .
+docker run -p 8080:8080 gobi
+
+# 或使用 docker-compose
+docker-compose up -d
+```
+
+---
+
 ## 🚀 核心功能
 
 ### 🔌 **API 优先架构**
@@ -161,21 +221,6 @@ POST /webhooks/reports
 - Go 1.21 或更高版本
 - SQLite（用于开发）
 - MySQL/PostgreSQL（用于生产）
-
----
-
-## ⚡ 快速开始
-
-```bash
-# 克隆并运行
-git clone https://github.com/sy-vendor/gobi.git
-cd gobi
-go mod download
-go run cmd/server/main.go
-
-# 服务器在 http://localhost:8080 启动
-# 默认管理员: admin/admin123
-```
 
 ---
 

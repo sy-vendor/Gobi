@@ -166,15 +166,60 @@ POST /webhooks/reports
 
 ## ⚡ Quick Start
 
+### 🚀 One-Command Setup
 ```bash
-# Clone and run
+# Clone and setup everything
 git clone https://github.com/sy-vendor/gobi.git
 cd gobi
-go mod download
-go run cmd/server/main.go
+make setup
+
+# Start development server
+make dev
 
 # Server starts on http://localhost:8080
 # Default admin: admin/admin123
+```
+
+### 🛠️ Development Tools
+
+```bash
+# View all available commands
+make help
+
+# Development workflow
+make dev-full          # Format, lint, test, build
+
+# Testing
+make test              # Run tests
+make test-coverage     # Run tests with coverage
+make test-race         # Run tests with race detection
+
+# Code quality
+make lint              # Run linter
+make format            # Format code
+make security-scan     # Security vulnerability scan
+
+# Database
+make migrate           # Run migrations
+make setup-data        # Setup sample data
+make test-data         # Test all chart data
+
+# Docker
+make docker-build      # Build Docker image
+make docker-run        # Run Docker container
+
+# Production
+make prod-build        # Production build with all checks
+```
+
+### 📦 Docker Quick Start
+```bash
+# Build and run with Docker
+docker build -t gobi .
+docker run -p 8080:8080 gobi
+
+# Or use docker-compose
+docker-compose up -d
 ```
 
 ---

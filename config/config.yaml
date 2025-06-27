@@ -1,29 +1,136 @@
 default:
   server:
     port: "8080"
+    host: "0.0.0.0"
+    read_timeout: 30
+    write_timeout: 30
+    max_header_bytes: 1048576
   jwt:
-    secret: "default_jwt_secret"
+    secret: "default_jwt_secret_change_in_production"
     expiration_hours: 168  # 7天 = 24 * 7
+    refresh_expiration_hours: 720  # 30天
   database:
     type: "sqlite"
     dsn: "gobi.db"
+    max_open_conns: 25
+    max_idle_conns: 5
+    conn_max_lifetime: 300
+  security:
+    bcrypt_cost: 12
+    rate_limit: "100-M"  # 100 requests per minute
+    cors_origins: ["http://localhost:3000", "http://localhost:5173"]
+  logging:
+    level: "info"
+    format: "json"
+    output: "stdout"
+  cache:
+    enabled: true
+    ttl: 300  # 5 minutes
+    max_size: 1000
+  webhook:
+    timeout: 30
+    max_retries: 3
+    retry_delay: 5
 
 dev:
   server:
     port: "8080"
+    host: "0.0.0.0"
+    read_timeout: 30
+    write_timeout: 30
+    max_header_bytes: 1048576
   jwt:
-    secret: "dev_jwt_secret"
+    secret: "dev_jwt_secret_change_in_production"
     expiration_hours: 168  # 7天
+    refresh_expiration_hours: 720  # 30天
   database:
     type: "mysql"
     dsn: "user:password@tcp(127.0.0.1:3306)/gobi?charset=utf8mb4&parseTime=True&loc=Local"
+    max_open_conns: 25
+    max_idle_conns: 5
+    conn_max_lifetime: 300
+  security:
+    bcrypt_cost: 10
+    rate_limit: "1000-M"  # 1000 requests per minute
+    cors_origins: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"]
+  logging:
+    level: "debug"
+    format: "text"
+    output: "stdout"
+  cache:
+    enabled: true
+    ttl: 300  # 5 minutes
+    max_size: 1000
+  webhook:
+    timeout: 30
+    max_retries: 3
+    retry_delay: 5
 
 prod:
   server:
     port: "8080"
+    host: "0.0.0.0"
+    read_timeout: 30
+    write_timeout: 30
+    max_header_bytes: 1048576
   jwt:
-    secret: "prod_jwt_secret"
-    expiration_hours: 168  # 7天
+    secret: "prod_jwt_secret_must_be_changed_in_production"
+    expiration_hours: 24  # 1天
+    refresh_expiration_hours: 168  # 7天
   database:
     type: "postgres"
-    dsn: "host=localhost user=postgres password=pass dbname=gobi port=5432 sslmode=disable" 
+    dsn: "host=localhost user=postgres password=pass dbname=gobi port=5432 sslmode=disable"
+    max_open_conns: 100
+    max_idle_conns: 10
+    conn_max_lifetime: 300
+  security:
+    bcrypt_cost: 12
+    rate_limit: "100-M"  # 100 requests per minute
+    cors_origins: ["https://yourdomain.com", "https://app.yourdomain.com"]
+  logging:
+    level: "warn"
+    format: "json"
+    output: "file"
+    file_path: "/var/log/gobi/app.log"
+  cache:
+    enabled: true
+    ttl: 600  # 10 minutes
+    max_size: 5000
+  webhook:
+    timeout: 30
+    max_retries: 5
+    retry_delay: 10
+
+test:
+  server:
+    port: "8081"
+    host: "localhost"
+    read_timeout: 10
+    write_timeout: 10
+    max_header_bytes: 1048576
+  jwt:
+    secret: "test_jwt_secret"
+    expiration_hours: 1
+    refresh_expiration_hours: 24
+  database:
+    type: "sqlite"
+    dsn: ":memory:"
+    max_open_conns: 1
+    max_idle_conns: 1
+    conn_max_lifetime: 60
+  security:
+    bcrypt_cost: 4
+    rate_limit: "1000-M"
+    cors_origins: ["http://localhost:3000"]
+  logging:
+    level: "error"
+    format: "text"
+    output: "stdout"
+  cache:
+    enabled: false
+    ttl: 60
+    max_size: 100
+  webhook:
+    timeout: 5
+    max_retries: 1
+    retry_delay: 1 
