@@ -25,13 +25,8 @@ func NewQueryService(db *gorm.DB) *QueryService {
 func (s *QueryService) CreateQuery(query *models.Query, userID uint) error {
 	query.UserID = userID
 
-	validator := utils.GetGlobalSQLValidator()
-	if err := validator.ValidateSQLSmart(query.SQL); err != nil {
+	if err := utils.ValidateSQLComplete(query.SQL); err != nil {
 		return errors.WrapError(err, "Invalid SQL query")
-	}
-
-	if !utils.IsReadOnlyQuery(query.SQL) {
-		return errors.NewError(403, "Only SELECT queries are allowed", nil)
 	}
 
 	if err := s.db.Create(query).Error; err != nil {
@@ -90,8 +85,7 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 		query.DataSourceID = updates.DataSourceID
 	}
 	if updates.SQL != "" {
-		validator := utils.GetGlobalSQLValidator()
-		if err := validator.ValidateSQLSmart(updates.SQL); err != nil {
+		if err := utils.ValidateSQLComplete(updates.SQL); err != nil {
 			return nil, errors.WrapError(err, "Invalid SQL query")
 		}
 
@@ -160,8 +154,7 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	}
 
 	// 执行前验证 SQL
-	validator := utils.GetGlobalSQLValidator()
-	if err := validator.ValidateSQLSmart(query.SQL); err != nil {
+	if err := utils.ValidateSQLComplete(query.SQL); err != nil {
 		return nil, errors.WrapError(err, "Failed to execute query")
 	}
 

@@ -82,14 +82,8 @@ func ValidateSQLInBody() gin.HandlerFunc {
 		if sqlData, ok := body.(map[string]interface{}); ok {
 			if sqlStr, exists := sqlData["sql"]; exists {
 				if sql, ok := sqlStr.(string); ok {
-					if err := utils.ValidateSQL(sql); err != nil {
-						c.Error(errors.WrapError(err, "SQL validation failed"))
-						c.Abort()
-						return
-					}
-
-					if !utils.IsReadOnlyQuery(sql) {
-						c.Error(errors.NewError(403, "Only SELECT queries are allowed", nil))
+					if containsSuspiciousSQLPattern(sql) {
+						c.Error(errors.NewError(400, "Suspicious SQL pattern detected in request", nil))
 						c.Abort()
 						return
 					}

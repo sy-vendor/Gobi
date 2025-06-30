@@ -123,14 +123,6 @@ func GetCacheStats() map[string]interface{} {
 func ExecuteSQL(ds models.DataSource, sqlStr string) ([]map[string]interface{}, error) {
 	sqlStr = SanitizeSQL(sqlStr)
 
-	if err := ValidateSQL(sqlStr); err != nil {
-		return nil, errors.WrapError(err, "SQL validation failed")
-	}
-
-	if !IsReadOnlyQuery(sqlStr) {
-		return nil, errors.NewError(403, "Only SELECT queries are allowed", nil)
-	}
-
 	db, err := database.GetConnection(&ds)
 	if err != nil {
 		return nil, fmt.Errorf("could not get database connection: %w", err)

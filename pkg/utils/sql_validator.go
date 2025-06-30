@@ -435,3 +435,26 @@ func IsReadOnlyQuery(sql string) bool {
 func SanitizeSQL(sql string) string {
 	return GetGlobalSQLValidator().SanitizeSQL(sql)
 }
+
+// ValidateSQLComplete performs complete SQL validation including sanitization, security checks, and read-only validation
+func (v *SQLValidator) ValidateSQLComplete(sql string) error {
+	if sql == "" {
+		return fmt.Errorf("SQL query cannot be empty")
+	}
+
+	// Sanitize first
+	sanitizedSQL := v.SanitizeSQL(sql)
+
+	// Check if it's read-only
+	if !v.IsReadOnlyQuery(sanitizedSQL) {
+		return fmt.Errorf("only SELECT queries are allowed")
+	}
+
+	// Perform comprehensive security validation
+	return v.ValidateSQLSmart(sanitizedSQL)
+}
+
+// ValidateSQLComplete is a convenience function using the global validator
+func ValidateSQLComplete(sql string) error {
+	return GetGlobalSQLValidator().ValidateSQLComplete(sql)
+}
