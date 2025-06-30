@@ -2,10 +2,12 @@ package services
 
 import (
 	"fmt"
+	"gobi/config"
 	"gobi/internal/models"
 	"gobi/internal/repositories"
 	"gobi/pkg/errors"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -145,6 +147,19 @@ type ExecuteQueryResult struct {
 	Source        string                   `json:"source"`
 }
 
+// 判断是否为简单查询
+func isSimpleQuery(sql string) bool {
+	normalized := strings.ToUpper(sql)
+	if strings.Contains(normalized, "JOIN") ||
+		strings.Contains(normalized, "GROUP BY") ||
+		strings.Contains(normalized, "ORDER BY") ||
+		strings.Contains(normalized, "UNION") ||
+		strings.Contains(normalized, "(") { // 粗略判定子查询
+		return false
+	}
+	return true
+}
+
 // ExecuteQuery executes a query and returns the results
 func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*ExecuteQueryResult, error) {
 	// Check cache first
@@ -194,7 +209,13 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	s.queryRepo.IncrementExecCount(queryID)
 
 	// Cache results
-	s.cacheService.Set(cacheKey, results, 5*time.Minute)
+	var ttl time.Duration
+	if isSimpleQuery(query.SQL) {
+		ttl = time.Duration(config.AppConfig.Cache.Strategy.SimpleQueryTTL) * time.Second
+	} else {
+		ttl = time.Duration(config.AppConfig.Cache.Strategy.ComplexQueryTTL) * time.Second
+	}
+	s.cacheService.Set(cacheKey, results, ttl)
 
 	// Build columns info
 	var columns []map[string]string
