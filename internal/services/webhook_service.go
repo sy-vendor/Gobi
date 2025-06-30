@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"time"
 
+	errs "errors"
+
 	"gorm.io/gorm"
 )
 
@@ -70,7 +72,10 @@ func (s *WebhookService) GetWebhook(webhookID uint, userID uint, isAdmin bool) (
 func (s *WebhookService) UpdateWebhook(webhookID uint, updates *models.Webhook, userID uint, isAdmin bool) (*models.Webhook, error) {
 	var webhook models.Webhook
 	if err := s.db.First(&webhook, webhookID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch webhook")
 	}
 	if !isAdmin && webhook.UserID != userID {
 		return nil, errors.ErrForbidden
@@ -102,12 +107,18 @@ func (s *WebhookService) UpdateWebhook(webhookID uint, updates *models.Webhook, 
 func (s *WebhookService) DeleteWebhook(webhookID uint, userID uint, isAdmin bool) error {
 	var webhook models.Webhook
 	if err := s.db.First(&webhook, webhookID).Error; err != nil {
-		return errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return errors.ErrNotFound
+		}
+		return errors.WrapError(err, "Could not fetch webhook")
 	}
 	if !isAdmin && webhook.UserID != userID {
 		return errors.ErrForbidden
 	}
-	return s.db.Delete(&webhook).Error
+	if err := s.db.Delete(&webhook).Error; err != nil {
+		return errors.WrapError(err, "Could not delete webhook")
+	}
+	return nil
 }
 
 // TriggerWebhook sends a webhook notification for a specific event

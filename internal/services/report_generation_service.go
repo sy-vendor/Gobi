@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	errs "errors"
+
 	"gorm.io/gorm"
 )
 
@@ -27,7 +29,10 @@ func (s *ReportGenerationService) GenerateExcelReport(chartID uint, templateID u
 	// Get chart
 	var chart models.Chart
 	if err := s.db.First(&chart, chartID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch chart")
 	}
 
 	// Permission check
@@ -38,7 +43,10 @@ func (s *ReportGenerationService) GenerateExcelReport(chartID uint, templateID u
 	// Get template
 	var template models.ExcelTemplate
 	if err := s.db.First(&template, templateID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch template")
 	}
 
 	// Permission check for template

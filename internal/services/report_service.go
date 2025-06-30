@@ -6,6 +6,8 @@ import (
 	"gobi/pkg/utils"
 	"time"
 
+	errs "errors"
+
 	"gorm.io/gorm"
 )
 
@@ -50,7 +52,10 @@ func (s *ReportService) ListReports(userID uint, isAdmin bool) ([]models.Report,
 func (s *ReportService) GetReport(reportID uint, userID uint, isAdmin bool) (*models.Report, error) {
 	var report models.Report
 	if err := s.db.Preload("User").First(&report, reportID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch report")
 	}
 
 	if !isAdmin && report.UserID != userID {
@@ -64,7 +69,10 @@ func (s *ReportService) GetReport(reportID uint, userID uint, isAdmin bool) (*mo
 func (s *ReportService) UpdateReport(reportID uint, updates *models.Report, userID uint, isAdmin bool) (*models.Report, error) {
 	var report models.Report
 	if err := s.db.First(&report, reportID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch report")
 	}
 
 	if !isAdmin && report.UserID != userID {
@@ -92,7 +100,10 @@ func (s *ReportService) UpdateReport(reportID uint, updates *models.Report, user
 func (s *ReportService) DeleteReport(reportID uint, userID uint, isAdmin bool) error {
 	var report models.Report
 	if err := s.db.First(&report, reportID).Error; err != nil {
-		return errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return errors.ErrNotFound
+		}
+		return errors.WrapError(err, "Could not fetch report")
 	}
 
 	if !isAdmin && report.UserID != userID {

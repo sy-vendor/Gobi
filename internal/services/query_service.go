@@ -1,6 +1,7 @@
 package services
 
 import (
+	errs "errors"
 	"fmt"
 	"gobi/config"
 	"gobi/internal/models"
@@ -48,7 +49,7 @@ func (s *QueryService) CreateQuery(query *models.Query, userID uint) error {
 
 	// Create query
 	if err := s.queryRepo.Create(query); err != nil {
-		return err
+		return errors.WrapError(err, "Could not create query")
 	}
 
 	// Flush cache
@@ -58,14 +59,21 @@ func (s *QueryService) CreateQuery(query *models.Query, userID uint) error {
 
 // ListQueries retrieves queries based on user permissions
 func (s *QueryService) ListQueries(userID uint, isAdmin bool) ([]models.Query, error) {
-	return s.queryRepo.FindByUser(userID, isAdmin)
+	queries, err := s.queryRepo.FindByUser(userID, isAdmin)
+	if err != nil {
+		return nil, errors.WrapError(err, "Could not fetch queries")
+	}
+	return queries, nil
 }
 
 // GetQuery retrieves a specific query
 func (s *QueryService) GetQuery(queryID uint, userID uint, isAdmin bool) (*models.Query, error) {
 	query, err := s.queryRepo.FindByID(queryID)
 	if err != nil {
-		return nil, err
+		if errs.Is(err, errors.ErrNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch query")
 	}
 
 	// Check permissions
@@ -80,7 +88,10 @@ func (s *QueryService) GetQuery(queryID uint, userID uint, isAdmin bool) (*model
 func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID uint, isAdmin bool) (*models.Query, error) {
 	query, err := s.queryRepo.FindByID(queryID)
 	if err != nil {
-		return nil, err
+		if errs.Is(err, errors.ErrNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch query")
 	}
 
 	// Check permissions
@@ -108,7 +119,7 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 
 	// Save changes
 	if err := s.queryRepo.Update(query); err != nil {
-		return nil, err
+		return nil, errors.WrapError(err, "Could not update query")
 	}
 
 	// Flush cache
@@ -120,7 +131,10 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 func (s *QueryService) DeleteQuery(queryID uint, userID uint, isAdmin bool) error {
 	query, err := s.queryRepo.FindByID(queryID)
 	if err != nil {
-		return err
+		if errs.Is(err, errors.ErrNotFound) {
+			return errors.ErrNotFound
+		}
+		return errors.WrapError(err, "Could not fetch query")
 	}
 
 	// Check permissions
@@ -130,7 +144,7 @@ func (s *QueryService) DeleteQuery(queryID uint, userID uint, isAdmin bool) erro
 
 	// Delete query
 	if err := s.queryRepo.Delete(queryID); err != nil {
-		return err
+		return errors.WrapError(err, "Could not delete query")
 	}
 
 	// Flush cache
@@ -175,7 +189,10 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	// Get query
 	query, err := s.queryRepo.FindByID(queryID)
 	if err != nil {
-		return nil, err
+		if errs.Is(err, errors.ErrNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch query")
 	}
 
 	// Check permissions

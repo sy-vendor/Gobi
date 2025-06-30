@@ -125,18 +125,18 @@ func ExecuteSQL(ds models.DataSource, sqlStr string) ([]map[string]interface{}, 
 
 	db, err := database.GetConnection(&ds)
 	if err != nil {
-		return nil, fmt.Errorf("could not get database connection: %w", err)
+		return nil, errors.WrapError(err, "could not get database connection")
 	}
 
 	rows, err := db.Query(sqlStr)
 	if err != nil {
-		return nil, fmt.Errorf("query execution failed: %w", err)
+		return nil, errors.WrapError(err, "query execution failed")
 	}
 	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get column information: %w", err)
+		return nil, errors.WrapError(err, "failed to get column information")
 	}
 
 	for _, col := range cols {
@@ -154,7 +154,7 @@ func ExecuteSQL(ds models.DataSource, sqlStr string) ([]map[string]interface{}, 
 		}
 
 		if err := rows.Scan(scanArgs...); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, errors.WrapError(err, "failed to scan row")
 		}
 
 		rowMap := make(map[string]interface{})
@@ -171,7 +171,7 @@ func ExecuteSQL(ds models.DataSource, sqlStr string) ([]map[string]interface{}, 
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error during result iteration: %w", err)
+		return nil, errors.WrapError(err, "error during result iteration")
 	}
 
 	return results, nil

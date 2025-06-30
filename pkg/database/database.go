@@ -1,9 +1,9 @@
 package database
 
 import (
-	"fmt"
 	"gobi/config"
 	"gobi/internal/models"
+	"gobi/pkg/errors"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -23,10 +23,10 @@ func InitDB(cfg *config.Config) error {
 	case "postgres":
 		DB, err = gorm.Open(postgres.Open(cfg.Database.DSN), &gorm.Config{})
 	default:
-		return fmt.Errorf("unsupported database type: %s", cfg.Database.Type)
+		return errors.NewError(400, "unsupported database type: "+cfg.Database.Type, nil)
 	}
 	if err != nil {
-		return err
+		return errors.WrapError(err, "Failed to open database connection")
 	}
 
 	// Auto migrate the schema
@@ -43,7 +43,7 @@ func InitDB(cfg *config.Config) error {
 		&models.WebhookDelivery{},
 	)
 	if err != nil {
-		return err
+		return errors.WrapError(err, "Failed to auto-migrate database schema")
 	}
 
 	return nil

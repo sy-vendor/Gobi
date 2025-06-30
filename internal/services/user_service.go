@@ -9,6 +9,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 
+	errs "errors"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -79,7 +81,10 @@ func (s *UserService) AuthenticateUser(username, password string) (string, error
 func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch user")
 	}
 
 	user.Password = "" // Never return password
@@ -105,7 +110,10 @@ func (s *UserService) ListUsers() ([]models.User, error) {
 func (s *UserService) UpdateUser(userID uint, newEmail, newRole string) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch user")
 	}
 
 	if newEmail != "" {
@@ -134,14 +142,20 @@ func (s *UserService) DeleteUser(userID uint) error {
 func (s *UserService) ResetPassword(userID uint, newPassword string) error {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return errors.ErrNotFound
+		}
+		return errors.WrapError(err, "Could not fetch user")
 	}
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.WrapError(err, "Failed to hash password")
 	}
 	user.Password = string(hashed)
-	return s.db.Save(&user).Error
+	if err := s.db.Save(&user).Error; err != nil {
+		return errors.WrapError(err, "Could not update password")
+	}
+	return nil
 }
 
 // CreateAPIKey creates a new API key for a user and returns the plain key (only once)
@@ -191,20 +205,29 @@ func (s *UserService) ListAPIKeys(userID uint, isAdmin bool) ([]models.APIKey, e
 func (s *UserService) RevokeAPIKey(keyID uint, userID uint, isAdmin bool) error {
 	var key models.APIKey
 	if err := s.db.First(&key, keyID).Error; err != nil {
-		return errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return errors.ErrNotFound
+		}
+		return errors.WrapError(err, "Could not fetch API key")
 	}
 	if !isAdmin && key.UserID != userID {
 		return errors.ErrForbidden
 	}
 	key.Revoked = true
-	return s.db.Save(&key).Error
+	if err := s.db.Save(&key).Error; err != nil {
+		return errors.WrapError(err, "Could not revoke API key")
+	}
+	return nil
 }
 
 // GetAPIKeyByPrefix finds an API key by prefix (for auth middleware)
 func (s *UserService) GetAPIKeyByPrefix(prefix string) (*models.APIKey, error) {
 	var key models.APIKey
 	if err := s.db.Where("prefix = ? AND revoked = ?", prefix, false).First(&key).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch API key by prefix")
 	}
 	return &key, nil
 }

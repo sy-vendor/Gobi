@@ -5,6 +5,8 @@ import (
 	"gobi/internal/models"
 	"gobi/pkg/errors"
 
+	errs "errors"
+
 	"gorm.io/gorm"
 )
 
@@ -54,7 +56,10 @@ func (s *ChartService) ListCharts(userID uint, isAdmin bool) ([]models.Chart, er
 func (s *ChartService) GetChart(chartID uint, userID uint, isAdmin bool) (*models.Chart, error) {
 	var chart models.Chart
 	if err := s.db.Preload("Query").Preload("User").First(&chart, chartID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch chart")
 	}
 
 	if !isAdmin && chart.UserID != userID {
@@ -68,7 +73,10 @@ func (s *ChartService) GetChart(chartID uint, userID uint, isAdmin bool) (*model
 func (s *ChartService) UpdateChart(chartID uint, updates *models.Chart, userID uint, isAdmin bool) (*models.Chart, error) {
 	var chart models.Chart
 	if err := s.db.First(&chart, chartID).Error; err != nil {
-		return nil, errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrNotFound
+		}
+		return nil, errors.WrapError(err, "Could not fetch chart")
 	}
 
 	if !isAdmin && chart.UserID != userID {
@@ -111,7 +119,10 @@ func (s *ChartService) UpdateChart(chartID uint, updates *models.Chart, userID u
 func (s *ChartService) DeleteChart(chartID uint, userID uint, isAdmin bool) error {
 	var chart models.Chart
 	if err := s.db.First(&chart, chartID).Error; err != nil {
-		return errors.ErrNotFound
+		if errs.Is(err, gorm.ErrRecordNotFound) {
+			return errors.ErrNotFound
+		}
+		return errors.WrapError(err, "Could not fetch chart")
 	}
 
 	if !isAdmin && chart.UserID != userID {
