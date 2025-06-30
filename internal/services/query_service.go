@@ -25,6 +25,15 @@ func NewQueryService(db *gorm.DB) *QueryService {
 func (s *QueryService) CreateQuery(query *models.Query, userID uint) error {
 	query.UserID = userID
 
+	validator := utils.NewSQLValidator()
+	if err := validator.ValidateSQLSmart(query.SQL); err != nil {
+		return errors.WrapError(err, "Invalid SQL query")
+	}
+
+	if !utils.IsReadOnlyQuery(query.SQL) {
+		return errors.NewError(403, "Only SELECT queries are allowed", nil)
+	}
+
 	if err := s.db.Create(query).Error; err != nil {
 		return errors.WrapError(err, "Could not create query")
 	}
@@ -74,7 +83,6 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 		return nil, errors.ErrForbidden
 	}
 
-	// Update allowed fields
 	if updates.Name != "" {
 		query.Name = updates.Name
 	}
@@ -82,12 +90,20 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 		query.DataSourceID = updates.DataSourceID
 	}
 	if updates.SQL != "" {
+		validator := utils.NewSQLValidator()
+		if err := validator.ValidateSQLSmart(updates.SQL); err != nil {
+			return nil, errors.WrapError(err, "Invalid SQL query")
+		}
+
+		if !utils.IsReadOnlyQuery(updates.SQL) {
+			return nil, errors.NewError(403, "Only SELECT queries are allowed", nil)
+		}
+
 		query.SQL = updates.SQL
 	}
 	if updates.Description != "" {
 		query.Description = updates.Description
 	}
-	// Update IsPublic if provided
 	query.IsPublic = updates.IsPublic
 
 	if err := s.db.Save(&query).Error; err != nil {
@@ -138,18 +154,21 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 		}, nil
 	}
 
-	// Get query with data source
 	var query models.Query
 	if err := s.db.Preload("DataSource").First(&query, queryID).Error; err != nil {
 		return nil, errors.ErrNotFound
 	}
 
-	// Permission check
 	if !isAdmin && query.UserID != userID && !query.IsPublic {
 		return nil, errors.ErrForbidden
 	}
 
-	// Decrypt password
+	// 执行前验证 SQL
+	validator := utils.NewSQLValidator()
+	if err := validator.ValidateSQLSmart(query.SQL); err != nil {
+		return nil, errors.WrapError(err, "Failed to execute query")
+	}
+
 	if query.DataSource.Password != "" {
 		decryptedPassword, err := utils.DecryptAES(query.DataSource.Password)
 		if err != nil {
@@ -166,14 +185,11 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	}
 	executionTime := time.Since(startTime)
 
-	// Update execution count
 	query.ExecCount++
 	s.db.Save(&query)
 
-	// Set cache
 	utils.QueryCache.Set(cacheKey, results, 5*time.Minute)
 
-	// Prepare columns info
 	var columns []map[string]string
 	if len(results) > 0 {
 		for key := range results[0] {

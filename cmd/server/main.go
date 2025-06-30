@@ -77,6 +77,7 @@ func main() {
 
 	r.Use(middleware.Recovery())
 	r.Use(middleware.ErrorHandler())
+	r.Use(middleware.SQLSecurityMiddleware())
 	r.Use(gin.Logger())
 
 	// Public routes

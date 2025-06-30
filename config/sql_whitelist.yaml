@@ -1,0 +1,165 @@
+# SQL Whitelist Configuration
+# This file defines allowed SQL patterns, table names, and security rules
+
+# Allowed SQL keywords (case-insensitive)
+allowed_keywords:
+  - SELECT
+  - FROM
+  - WHERE
+  - AND
+  - OR
+  - ORDER
+  - BY
+  - GROUP
+  - HAVING
+  - LIMIT
+  - OFFSET
+  - JOIN
+  - LEFT
+  - RIGHT
+  - INNER
+  - OUTER
+  - ON
+  - AS
+  - DISTINCT
+  - COUNT
+  - SUM
+  - AVG
+  - MIN
+  - MAX
+  - CASE
+  - WHEN
+  - THEN
+  - ELSE
+  - END
+  - IN
+  - NOT
+  - LIKE
+  - IS
+  - NULL
+  - BETWEEN
+  - ASC
+  - DESC
+  - TOP
+  - FIRST
+  - LAST
+
+# Allowed SQL functions (case-insensitive)
+allowed_functions:
+  - COUNT
+  - SUM
+  - AVG
+  - MIN
+  - MAX
+  - UPPER
+  - LOWER
+  - TRIM
+  - LENGTH
+  - SUBSTR
+  - CONCAT
+  - COALESCE
+  - NULLIF
+  - ROUND
+  - DATE
+  - DATETIME
+  - STRFTIME
+  - JULIANDAY
+  - YEAR
+  - MONTH
+  - DAY
+  - HOUR
+  - MINUTE
+
+# Blocked SQL keywords (case-insensitive)
+blocked_keywords:
+  - DROP
+  - DELETE
+  - UPDATE
+  - INSERT
+  - CREATE
+  - ALTER
+  - TRUNCATE
+  - EXEC
+  - EXECUTE
+  - EXECUTE_IMMEDIATE
+  - UNION
+  - UNION_ALL
+  - INTERSECT
+  - EXCEPT
+  - GRANT
+  - REVOKE
+  - COMMIT
+  - ROLLBACK
+  - SAVEPOINT
+  - BEGIN
+  - END
+  - TRANSACTION
+  - LOCK
+  - UNLOCK
+  - SHUTDOWN
+  - KILL
+  - PROCESS
+  - SHOW
+  - DESCRIBE
+  - EXPLAIN
+  - ANALYZE
+  - VACUUM
+  - REINDEX
+
+# Blocked SQL functions (case-insensitive)
+blocked_functions:
+  - LOAD_FILE
+  - SLEEP
+  - BENCHMARK
+  - UPDATEXML
+  - EXTRACTVALUE
+  - USER
+  - DATABASE
+  - VERSION
+  - CONNECTION_ID
+  - LAST_INSERT_ID
+  - ROW_COUNT
+
+# Suspicious patterns to block
+suspicious_patterns:
+  - "1=1"
+  - "TRUE"
+  - "FALSE"
+  - "OR 1"
+  - "OR TRUE"
+  - "OR FALSE"
+  - "AND 1"
+  - "AND TRUE"
+  - "AND FALSE"
+  - "';"
+  - "';--"
+  - "';/*"
+  - "';#"
+  - "UNION SELECT"
+  - "UNION ALL SELECT"
+  - "INFORMATION_SCHEMA"
+  - "SYSTEM_TABLES"
+  - "DUAL"
+
+# Allowed table name patterns (regex)
+allowed_table_patterns:
+  - "^[a-zA-Z_][a-zA-Z0-9_.]*$"
+
+# Allowed column name patterns (regex)
+allowed_column_patterns:
+  - "^[a-zA-Z_][a-zA-Z0-9_.]*$"
+
+# Query execution limits
+query_limits:
+  max_execution_time: 30s
+  max_rows: 10000
+  max_query_length: 10000
+
+# Security settings
+security:
+  allow_comments: false
+  allow_multiple_statements: false
+  require_readonly: true
+  validate_table_names: true
+  validate_column_names: true
+  sanitize_input: true 
