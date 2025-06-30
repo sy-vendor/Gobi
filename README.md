@@ -436,6 +436,18 @@ Supported chart types:
 
 ## 🔌 API Usage Examples
 
+### Registration
+
+```bash
+curl -X POST https://gobi.example.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "admin123"
+  }'
+```
+
 ### Login
 
 ```bash

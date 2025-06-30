@@ -33,7 +33,6 @@
 
 ---
 
-## ⚡ 快速开始
 
 ### 🚀 一键设置
 ```bash
@@ -438,6 +437,18 @@ default:
 ---
 
 ## 🔌 API 使用示例
+
+### 注册
+
+```bash
+curl -X POST https://gobi.example.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "admin123"
+  }'
+```
 
 ### 登录
 
