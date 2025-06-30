@@ -25,7 +25,7 @@ func NewQueryService(db *gorm.DB) *QueryService {
 func (s *QueryService) CreateQuery(query *models.Query, userID uint) error {
 	query.UserID = userID
 
-	validator := utils.NewSQLValidator()
+	validator := utils.GetGlobalSQLValidator()
 	if err := validator.ValidateSQLSmart(query.SQL); err != nil {
 		return errors.WrapError(err, "Invalid SQL query")
 	}
@@ -90,13 +90,9 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 		query.DataSourceID = updates.DataSourceID
 	}
 	if updates.SQL != "" {
-		validator := utils.NewSQLValidator()
+		validator := utils.GetGlobalSQLValidator()
 		if err := validator.ValidateSQLSmart(updates.SQL); err != nil {
 			return nil, errors.WrapError(err, "Invalid SQL query")
-		}
-
-		if !utils.IsReadOnlyQuery(updates.SQL) {
-			return nil, errors.NewError(403, "Only SELECT queries are allowed", nil)
 		}
 
 		query.SQL = updates.SQL
@@ -164,7 +160,7 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	}
 
 	// 执行前验证 SQL
-	validator := utils.NewSQLValidator()
+	validator := utils.GetGlobalSQLValidator()
 	if err := validator.ValidateSQLSmart(query.SQL); err != nil {
 		return nil, errors.WrapError(err, "Failed to execute query")
 	}
@@ -188,7 +184,8 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	query.ExecCount++
 	s.db.Save(&query)
 
-	utils.QueryCache.Set(cacheKey, results, 5*time.Minute)
+	// 使用智能缓存策略
+	utils.SetQueryCache(cacheKey, results, query.SQL)
 
 	var columns []map[string]string
 	if len(results) > 0 {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 )
 
@@ -14,6 +15,19 @@ type SQLValidator struct {
 	blockedKeywords        map[string]bool
 	blockedFunctions       map[string]bool
 	strictColumnValidation bool
+}
+
+var (
+	globalSQLValidator *SQLValidator
+	validatorOnce      sync.Once
+)
+
+// GetGlobalSQLValidator returns a singleton instance of SQLValidator
+func GetGlobalSQLValidator() *SQLValidator {
+	validatorOnce.Do(func() {
+		globalSQLValidator = NewSQLValidator()
+	})
+	return globalSQLValidator
 }
 
 // NewSQLValidator creates a new SQL validator with default security rules
@@ -407,20 +421,17 @@ func (v *SQLValidator) ValidateColumnName(columnName string) error {
 	return v.ValidateColumnNameSmart(columnName)
 }
 
-// Global validator instance
-var GlobalSQLValidator = NewSQLValidator()
-
 // ValidateSQL is a convenience function using the global validator
 func ValidateSQL(sql string) error {
-	return GlobalSQLValidator.ValidateSQL(sql)
+	return GetGlobalSQLValidator().ValidateSQL(sql)
 }
 
 // IsReadOnlyQuery is a convenience function using the global validator
 func IsReadOnlyQuery(sql string) bool {
-	return GlobalSQLValidator.IsReadOnlyQuery(sql)
+	return GetGlobalSQLValidator().IsReadOnlyQuery(sql)
 }
 
 // SanitizeSQL is a convenience function using the global validator
 func SanitizeSQL(sql string) string {
-	return GlobalSQLValidator.SanitizeSQL(sql)
+	return GetGlobalSQLValidator().SanitizeSQL(sql)
 }

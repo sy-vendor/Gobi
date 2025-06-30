@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gobi/internal/models"
 	"gobi/internal/services"
+	"gobi/pkg/database"
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
 	"io"
@@ -836,4 +837,19 @@ func (h *Handler) RevokeAPIKey(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "API key revoked"})
+}
+
+// SystemStats returns system statistics
+func (h *Handler) SystemStats(c *gin.Context) {
+	dbStats := database.GetConnectionStats()
+
+	cacheStats := utils.GetCacheStats()
+
+	stats := map[string]interface{}{
+		"database":  dbStats,
+		"cache":     cacheStats,
+		"timestamp": time.Now().Unix(),
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

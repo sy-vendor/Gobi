@@ -34,9 +34,13 @@ func main() {
 	}
 	db := database.GetDB()
 
+	// 初始化连接管理器
+	database.InitConnectionManager(&cfg)
+
 	defer database.CloseAllConnections()
 
-	utils.InitQueryCache(5*time.Minute, 10*time.Minute)
+	// 初始化智能缓存
+	utils.InitQueryCache(&cfg)
 	utils.InitReportGenerator()
 	defer utils.StopReportGenerator()
 
@@ -141,6 +145,9 @@ func main() {
 
 		// Dashboard stats
 		authorized.GET("/dashboard/stats", h.DashboardStats)
+
+		// System monitoring
+		authorized.GET("/system/stats", h.SystemStats)
 
 		// User management (admin only)
 		authorized.GET("/users", h.ListUsers)

@@ -15,6 +15,11 @@ default:
     max_open_conns: 25
     max_idle_conns: 5
     conn_max_lifetime: 300
+    connection_pool:
+      max_open_conns: 25
+      max_idle_conns: 5
+      conn_max_lifetime: 300
+      conn_max_idle_time: 60
   security:
     bcrypt_cost: 12
     rate_limit: "100-M"  # 100 requests per minute
@@ -27,6 +32,10 @@ default:
     enabled: true
     ttl: 300  # 5 minutes
     max_size: 1000
+    strategy:
+      simple_query_ttl: 300   # 5 minutes for simple queries
+      complex_query_ttl: 600  # 10 minutes for complex queries
+      max_cache_size: 1000
   webhook:
     timeout: 30
     max_retries: 3
@@ -49,6 +58,11 @@ dev:
     max_open_conns: 25
     max_idle_conns: 5
     conn_max_lifetime: 300
+    connection_pool:
+      max_open_conns: 25
+      max_idle_conns: 5
+      conn_max_lifetime: 300
+      conn_max_idle_time: 60
   security:
     bcrypt_cost: 10
     rate_limit: "1000-M"  # 1000 requests per minute
@@ -61,6 +75,10 @@ dev:
     enabled: true
     ttl: 300  # 5 minutes
     max_size: 1000
+    strategy:
+      simple_query_ttl: 300   # 5 minutes for simple queries
+      complex_query_ttl: 600  # 10 minutes for complex queries
+      max_cache_size: 1000
   webhook:
     timeout: 30
     max_retries: 3
@@ -83,6 +101,11 @@ prod:
     max_open_conns: 100
     max_idle_conns: 10
     conn_max_lifetime: 300
+    connection_pool:
+      max_open_conns: 100
+      max_idle_conns: 10
+      conn_max_lifetime: 300
+      conn_max_idle_time: 120
   security:
     bcrypt_cost: 12
     rate_limit: "100-M"  # 100 requests per minute
@@ -96,6 +119,10 @@ prod:
     enabled: true
     ttl: 600  # 10 minutes
     max_size: 5000
+    strategy:
+      simple_query_ttl: 600   # 10 minutes for simple queries
+      complex_query_ttl: 1800 # 30 minutes for complex queries
+      max_cache_size: 5000
   webhook:
     timeout: 30
     max_retries: 5
@@ -118,6 +145,11 @@ test:
     max_open_conns: 1
     max_idle_conns: 1
     conn_max_lifetime: 60
+    connection_pool:
+      max_open_conns: 1
+      max_idle_conns: 1
+      conn_max_lifetime: 60
+      conn_max_idle_time: 30
   security:
     bcrypt_cost: 4
     rate_limit: "1000-M"
@@ -130,6 +162,10 @@ test:
     enabled: false
     ttl: 60
     max_size: 100
+    strategy:
+      simple_query_ttl: 60    # 1 minute for simple queries
+      complex_query_ttl: 120  # 2 minutes for complex queries
+      max_cache_size: 100
   webhook:
     timeout: 5
     max_retries: 1

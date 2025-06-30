@@ -16,8 +16,27 @@ type Config struct {
 		ExpirationHours int
 	}
 	Database struct {
-		Type string
-		DSN  string
+		Type            string
+		DSN             string
+		MaxOpenConns    int
+		MaxIdleConns    int
+		ConnMaxLifetime int
+		ConnectionPool  struct {
+			MaxOpenConns    int `yaml:"max_open_conns"`
+			MaxIdleConns    int `yaml:"max_idle_conns"`
+			ConnMaxLifetime int `yaml:"conn_max_lifetime"`
+			ConnMaxIdleTime int `yaml:"conn_max_idle_time"`
+		} `yaml:"connection_pool"`
+	}
+	Cache struct {
+		Enabled  bool
+		TTL      int
+		MaxSize  int `yaml:"max_size"`
+		Strategy struct {
+			SimpleQueryTTL  int `yaml:"simple_query_ttl"`
+			ComplexQueryTTL int `yaml:"complex_query_ttl"`
+			MaxCacheSize    int `yaml:"max_cache_size"`
+		}
 	}
 }
 
@@ -66,6 +85,19 @@ func LoadConfig() {
 	AppConfig.JWT.ExpirationHours = viper.GetInt("jwt.expiration_hours")
 	AppConfig.Database.Type = viper.GetString("database.type")
 	AppConfig.Database.DSN = viper.GetString("database.dsn")
+	AppConfig.Database.MaxOpenConns = viper.GetInt("database.max_open_conns")
+	AppConfig.Database.MaxIdleConns = viper.GetInt("database.max_idle_conns")
+	AppConfig.Database.ConnMaxLifetime = viper.GetInt("database.conn_max_lifetime")
+	AppConfig.Database.ConnectionPool.MaxOpenConns = viper.GetInt("database.connection_pool.max_open_conns")
+	AppConfig.Database.ConnectionPool.MaxIdleConns = viper.GetInt("database.connection_pool.max_idle_conns")
+	AppConfig.Database.ConnectionPool.ConnMaxLifetime = viper.GetInt("database.connection_pool.conn_max_lifetime")
+	AppConfig.Database.ConnectionPool.ConnMaxIdleTime = viper.GetInt("database.connection_pool.conn_max_idle_time")
+	AppConfig.Cache.Enabled = viper.GetBool("cache.enabled")
+	AppConfig.Cache.TTL = viper.GetInt("cache.ttl")
+	AppConfig.Cache.MaxSize = viper.GetInt("cache.max_size")
+	AppConfig.Cache.Strategy.SimpleQueryTTL = viper.GetInt("cache.strategy.simple_query_ttl")
+	AppConfig.Cache.Strategy.ComplexQueryTTL = viper.GetInt("cache.strategy.complex_query_ttl")
+	AppConfig.Cache.Strategy.MaxCacheSize = viper.GetInt("cache.strategy.max_cache_size")
 
 	validateConfig(&AppConfig)
 

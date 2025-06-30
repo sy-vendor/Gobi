@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"fmt"
+	"gobi/config"
 	"gobi/internal/models"
 	"gobi/pkg/database"
 	"gobi/pkg/errors"
@@ -15,22 +16,107 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-var QueryCache *cache.Cache
+var (
+	QueryCache *cache.Cache
+	appConfig  *config.Config
+)
 
-func InitQueryCache(defaultExpiration, cleanupInterval time.Duration) {
+// InitQueryCache initializes the query cache with configuration
+func InitQueryCache(cfg *config.Config) {
+	appConfig = cfg
+
+	defaultExpiration := time.Duration(cfg.Cache.TTL) * time.Second
+	cleanupInterval := defaultExpiration * 2
+
 	QueryCache = cache.New(defaultExpiration, cleanupInterval)
 }
 
+// GetQueryCache retrieves a value from cache
 func GetQueryCache(key string) (interface{}, bool) {
 	return QueryCache.Get(key)
 }
 
-func SetQueryCache(key string, value interface{}, ttl time.Duration) {
+// SetQueryCache sets a value in cache with smart TTL
+func SetQueryCache(key string, value interface{}, sql string) {
+	ttl := getSmartTTL(sql)
 	QueryCache.Set(key, value, ttl)
 }
 
+// DeleteQueryCache deletes a value from cache
 func DeleteQueryCache(key string) {
 	QueryCache.Delete(key)
+}
+
+// getSmartTTL determines cache TTL based on query complexity
+func getSmartTTL(sql string) time.Duration {
+	if appConfig == nil {
+		return 5 * time.Minute // Default fallback
+	}
+
+	complexity := analyzeQueryComplexity(sql)
+
+	if complexity == "simple" {
+		return time.Duration(appConfig.Cache.Strategy.SimpleQueryTTL) * time.Second
+	} else {
+		return time.Duration(appConfig.Cache.Strategy.ComplexQueryTTL) * time.Second
+	}
+}
+
+// analyzeQueryComplexity analyzes SQL query complexity
+func analyzeQueryComplexity(sql string) string {
+	upperSQL := strings.ToUpper(sql)
+
+	simplePatterns := []string{
+		"SELECT COUNT(*)",
+		"SELECT * FROM",
+		"SELECT ID,",
+		"SELECT NAME,",
+	}
+
+	complexPatterns := []string{
+		"JOIN",
+		"UNION",
+		"GROUP BY",
+		"HAVING",
+		"SUBQUERY",
+		"EXISTS",
+		"IN (",
+		"WITH",
+		"WINDOW",
+		"OVER (",
+	}
+
+	for _, pattern := range complexPatterns {
+		if strings.Contains(upperSQL, pattern) {
+			return "complex"
+		}
+	}
+
+	for _, pattern := range simplePatterns {
+		if strings.Contains(upperSQL, pattern) {
+			return "simple"
+		}
+	}
+
+	return "complex"
+}
+
+// GetCacheStats returns cache statistics
+func GetCacheStats() map[string]interface{} {
+	if QueryCache == nil {
+		return map[string]interface{}{
+			"enabled": false,
+			"error":   "Cache not initialized",
+		}
+	}
+
+	return map[string]interface{}{
+		"enabled":           true,
+		"max_cache_size":    appConfig.Cache.Strategy.MaxCacheSize,
+		"simple_query_ttl":  appConfig.Cache.Strategy.SimpleQueryTTL,
+		"complex_query_ttl": appConfig.Cache.Strategy.ComplexQueryTTL,
+		"note":              "Detailed statistics not available with go-cache",
+	}
 }
 
 // ExecuteSQL connects to the given data source and executes the SQL, returning the result as []map[string]interface{} or error
@@ -56,15 +142,13 @@ func ExecuteSQL(ds models.DataSource, sqlStr string) ([]map[string]interface{}, 
 	}
 	defer rows.Close()
 
-	// Get column information
 	cols, err := rows.Columns()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get column information: %w", err)
 	}
 
-	// Validate column names for security (using smart validation with relaxed mode)
 	for _, col := range cols {
-		if err := GlobalSQLValidator.ValidateColumnNameSmart(col); err != nil {
+		if err := GetGlobalSQLValidator().ValidateColumnNameSmart(col); err != nil {
 			return nil, errors.WrapError(err, "invalid column name detected")
 		}
 	}

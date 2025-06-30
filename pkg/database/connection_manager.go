@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"gobi/config"
 	"gobi/internal/models"
 	"sync"
 	"time"
@@ -11,7 +12,13 @@ import (
 var (
 	connectionPools = make(map[uint]*sql.DB)
 	mu              sync.Mutex
+	appConfig       *config.Config
 )
+
+// InitConnectionManager initializes the connection manager with configuration
+func InitConnectionManager(cfg *config.Config) {
+	appConfig = cfg
+}
 
 // GetConnection retrieves a cached database connection pool for a given data source.
 // If a pool does not exist, it creates a new one and caches it.
@@ -19,18 +26,14 @@ func GetConnection(ds *models.DataSource) (*sql.DB, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	// If a connection pool already exists, return it.
 	if db, ok := connectionPools[ds.ID]; ok {
-		// Check if the connection is still alive.
 		if err := db.Ping(); err == nil {
 			return db, nil
 		}
-		// If not alive, close it and remove from the pool.
 		db.Close()
 		delete(connectionPools, ds.ID)
 	}
 
-	// Create a new connection if not found in the cache.
 	var dsn, driver string
 	switch ds.Type {
 	case "mysql":
@@ -51,12 +54,19 @@ func GetConnection(ds *models.DataSource) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
-	// Configure the connection pool.
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	if appConfig != nil {
+		pool := appConfig.Database.ConnectionPool
+		db.SetMaxOpenConns(pool.MaxOpenConns)
+		db.SetMaxIdleConns(pool.MaxIdleConns)
+		db.SetConnMaxLifetime(time.Duration(pool.ConnMaxLifetime) * time.Second)
+		db.SetConnMaxIdleTime(time.Duration(pool.ConnMaxIdleTime) * time.Second)
+	} else {
+		db.SetMaxOpenConns(25)
+		db.SetMaxIdleConns(5)
+		db.SetConnMaxLifetime(5 * time.Minute)
+		db.SetConnMaxIdleTime(1 * time.Minute)
+	}
 
-	// Cache the new connection pool.
 	connectionPools[ds.ID] = db
 
 	return db, nil
@@ -72,4 +82,26 @@ func CloseAllConnections() {
 		db.Close()
 	}
 	connectionPools = make(map[uint]*sql.DB) // Clear the map
+}
+
+// GetConnectionStats returns statistics about connection pools
+func GetConnectionStats() map[string]interface{} {
+	mu.Lock()
+	defer mu.Unlock()
+
+	stats := make(map[string]interface{})
+	stats["total_pools"] = len(connectionPools)
+
+	poolDetails := make(map[uint]map[string]interface{})
+	for id, db := range connectionPools {
+		poolDetails[id] = map[string]interface{}{
+			"max_open_connections": db.Stats().MaxOpenConnections,
+			"open_connections":     db.Stats().OpenConnections,
+			"in_use":               db.Stats().InUse,
+			"idle":                 db.Stats().Idle,
+		}
+	}
+	stats["pool_details"] = poolDetails
+
+	return stats
 }

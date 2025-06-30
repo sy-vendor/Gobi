@@ -11,18 +11,14 @@ import (
 // SQLSecurityMiddleware provides SQL injection protection at the request level
 func SQLSecurityMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check for SQL in request body
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
 			contentType := c.GetHeader("Content-Type")
 			if strings.Contains(contentType, "application/json") {
-				// For JSON requests, we'll validate SQL in the handler
-				// This middleware serves as a first line of defense
 				c.Next()
 				return
 			}
 		}
 
-		// Check URL parameters for suspicious SQL patterns
 		for _, values := range c.Request.URL.Query() {
 			for _, value := range values {
 				if containsSuspiciousSQLPattern(value) {
@@ -33,7 +29,6 @@ func SQLSecurityMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		// Check form data for suspicious SQL patterns
 		if err := c.Request.ParseForm(); err == nil {
 			for _, values := range c.Request.Form {
 				for _, value := range values {
@@ -73,31 +68,26 @@ func containsSuspiciousSQLPattern(input string) bool {
 // ValidateSQLInBody validates SQL in request body
 func ValidateSQLInBody() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Only apply to specific endpoints that handle SQL
 		if !isSQLEndpoint(c.Request.URL.Path) {
 			c.Next()
 			return
 		}
 
-		// Get the request body
 		body, exists := c.Get("requestBody")
 		if !exists {
 			c.Next()
 			return
 		}
 
-		// Check if body contains SQL field
 		if sqlData, ok := body.(map[string]interface{}); ok {
 			if sqlStr, exists := sqlData["sql"]; exists {
 				if sql, ok := sqlStr.(string); ok {
-					// Validate SQL
 					if err := utils.ValidateSQL(sql); err != nil {
 						c.Error(errors.WrapError(err, "SQL validation failed"))
 						c.Abort()
 						return
 					}
 
-					// Ensure query is read-only
 					if !utils.IsReadOnlyQuery(sql) {
 						c.Error(errors.NewError(403, "Only SELECT queries are allowed", nil))
 						c.Abort()
@@ -134,10 +124,6 @@ func isSQLEndpoint(path string) bool {
 // SQLRateLimitMiddleware provides rate limiting for SQL operations
 func SQLRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// This is a placeholder for rate limiting implementation
-		// In production, you would use a proper rate limiter like Redis
-
-		// For now, we'll just pass through
 		c.Next()
 	}
 }
@@ -145,7 +131,6 @@ func SQLRateLimitMiddleware() gin.HandlerFunc {
 // SQLAuditMiddleware logs SQL operations for audit purposes
 func SQLAuditMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Log the request for audit purposes
 		userID, _ := c.Get("userID")
 		role, _ := c.Get("role")
 
