@@ -123,3 +123,15 @@ func NewConflictError(msg string, err error) *CustomError {
 }
 
 var As = errors.As
+
+// Additional common errors
+var (
+	ErrInvalidChartType           = NewError(400, "Invalid chart type", nil)
+	ErrInvalidChartConfig         = NewError(400, "Invalid chart configuration", nil)
+	ErrInvalidChartData           = NewError(400, "Invalid chart data", nil)
+	ErrDataSourceNameRequired     = NewError(400, "DataSource name is required", nil)
+	ErrDataSourceTypeRequired     = NewError(400, "DataSource type is required", nil)
+	ErrDataSourceHostRequired     = NewError(400, "DataSource host is required", nil)
+	ErrDataSourcePortRequired     = NewError(400, "DataSource port is required", nil)
+	ErrDataSourceDatabaseRequired = NewError(400, "DataSource database is required", nil)
+)

@@ -442,15 +442,12 @@ func (v *SQLValidator) ValidateSQLComplete(sql string) error {
 		return fmt.Errorf("SQL query cannot be empty")
 	}
 
-	// Sanitize first
 	sanitizedSQL := v.SanitizeSQL(sql)
 
-	// Check if it's read-only
 	if !v.IsReadOnlyQuery(sanitizedSQL) {
 		return fmt.Errorf("only SELECT queries are allowed")
 	}
 
-	// Perform comprehensive security validation
 	return v.ValidateSQLSmart(sanitizedSQL)
 }
 

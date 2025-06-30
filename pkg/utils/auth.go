@@ -30,6 +30,29 @@ func GenerateJWT(userID uint, role string) (string, error) {
 	return tokenString, nil
 }
 
+// ValidateJWT validates a JWT token and returns user ID and role
+func ValidateJWT(tokenString string) (uint, string, error) {
+	cfg := config.AppConfig
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(cfg.JWT.Secret), nil
+	})
+
+	if err != nil {
+		return 0, "", err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userID := uint(claims["user_id"].(float64))
+		role := claims["role"].(string)
+		return userID, role, nil
+	}
+
+	return 0, "", fmt.Errorf("invalid token")
+}
+
 // EncryptAES 加密明文，返回 base64 字符串
 func EncryptAES(plaintext string) (string, error) {
 	key := []byte(os.Getenv("DATA_SOURCE_SECRET"))

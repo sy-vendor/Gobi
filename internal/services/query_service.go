@@ -3,81 +3,90 @@ package services
 import (
 	"fmt"
 	"gobi/internal/models"
+	"gobi/internal/repositories"
 	"gobi/pkg/errors"
-	"gobi/pkg/utils"
 	"strconv"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // QueryService handles query-related business logic
 type QueryService struct {
-	db *gorm.DB
+	queryRepo           repositories.QueryRepository
+	cacheService        CacheService
+	validationService   ValidationService
+	sqlExecutionService SQLExecutionService
+	encryptionService   EncryptionService
 }
 
 // NewQueryService creates a new QueryService instance
-func NewQueryService(db *gorm.DB) *QueryService {
-	return &QueryService{db: db}
+func NewQueryService(
+	queryRepo repositories.QueryRepository,
+	cacheService CacheService,
+	validationService ValidationService,
+	sqlExecutionService SQLExecutionService,
+	encryptionService EncryptionService,
+) *QueryService {
+	return &QueryService{
+		queryRepo:           queryRepo,
+		cacheService:        cacheService,
+		validationService:   validationService,
+		sqlExecutionService: sqlExecutionService,
+		encryptionService:   encryptionService,
+	}
 }
 
 // CreateQuery creates a new query
 func (s *QueryService) CreateQuery(query *models.Query, userID uint) error {
 	query.UserID = userID
 
-	if err := utils.ValidateSQLComplete(query.SQL); err != nil {
+	// Validate SQL
+	if err := s.validationService.ValidateSQL(query.SQL); err != nil {
 		return errors.WrapError(err, "Invalid SQL query")
 	}
 
-	if err := s.db.Create(query).Error; err != nil {
-		return errors.WrapError(err, "Could not create query")
+	// Create query
+	if err := s.queryRepo.Create(query); err != nil {
+		return err
 	}
 
-	utils.QueryCache.Flush()
+	// Flush cache
+	s.cacheService.Flush()
 	return nil
 }
 
 // ListQueries retrieves queries based on user permissions
 func (s *QueryService) ListQueries(userID uint, isAdmin bool) ([]models.Query, error) {
-	var queries []models.Query
-
-	query := s.db.Preload("DataSource").Preload("User").Model(&models.Query{})
-	if !isAdmin {
-		query = query.Where("user_id = ? OR is_public = ?", userID, true)
-	}
-
-	if err := query.Find(&queries).Error; err != nil {
-		return nil, errors.WrapError(err, "Could not fetch queries")
-	}
-
-	return queries, nil
+	return s.queryRepo.FindByUser(userID, isAdmin)
 }
 
 // GetQuery retrieves a specific query
 func (s *QueryService) GetQuery(queryID uint, userID uint, isAdmin bool) (*models.Query, error) {
-	var query models.Query
-	if err := s.db.Preload("DataSource").Preload("User").First(&query, queryID).Error; err != nil {
-		return nil, errors.ErrNotFound
+	query, err := s.queryRepo.FindByID(queryID)
+	if err != nil {
+		return nil, err
 	}
 
+	// Check permissions
 	if !isAdmin && query.UserID != userID && !query.IsPublic {
 		return nil, errors.ErrForbidden
 	}
 
-	return &query, nil
+	return query, nil
 }
 
 // UpdateQuery updates a query
 func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID uint, isAdmin bool) (*models.Query, error) {
-	var query models.Query
-	if err := s.db.First(&query, queryID).Error; err != nil {
-		return nil, errors.ErrNotFound
+	query, err := s.queryRepo.FindByID(queryID)
+	if err != nil {
+		return nil, err
 	}
 
+	// Check permissions
 	if !isAdmin && query.UserID != userID {
 		return nil, errors.ErrForbidden
 	}
 
+	// Update fields
 	if updates.Name != "" {
 		query.Name = updates.Name
 	}
@@ -85,10 +94,9 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 		query.DataSourceID = updates.DataSourceID
 	}
 	if updates.SQL != "" {
-		if err := utils.ValidateSQLComplete(updates.SQL); err != nil {
+		if err := s.validationService.ValidateSQL(updates.SQL); err != nil {
 			return nil, errors.WrapError(err, "Invalid SQL query")
 		}
-
 		query.SQL = updates.SQL
 	}
 	if updates.Description != "" {
@@ -96,30 +104,35 @@ func (s *QueryService) UpdateQuery(queryID uint, updates *models.Query, userID u
 	}
 	query.IsPublic = updates.IsPublic
 
-	if err := s.db.Save(&query).Error; err != nil {
-		return nil, errors.WrapError(err, "Could not update query")
+	// Save changes
+	if err := s.queryRepo.Update(query); err != nil {
+		return nil, err
 	}
 
-	utils.QueryCache.Flush()
-	return &query, nil
+	// Flush cache
+	s.cacheService.Flush()
+	return query, nil
 }
 
 // DeleteQuery deletes a query
 func (s *QueryService) DeleteQuery(queryID uint, userID uint, isAdmin bool) error {
-	var query models.Query
-	if err := s.db.First(&query, queryID).Error; err != nil {
-		return errors.ErrNotFound
+	query, err := s.queryRepo.FindByID(queryID)
+	if err != nil {
+		return err
 	}
 
+	// Check permissions
 	if !isAdmin && query.UserID != userID {
 		return errors.ErrForbidden
 	}
 
-	if err := s.db.Delete(&query).Error; err != nil {
-		return errors.WrapError(err, "Could not delete query")
+	// Delete query
+	if err := s.queryRepo.Delete(queryID); err != nil {
+		return err
 	}
 
-	utils.QueryCache.Flush()
+	// Flush cache
+	s.cacheService.Flush()
 	return nil
 }
 
@@ -136,7 +149,7 @@ type ExecuteQueryResult struct {
 func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*ExecuteQueryResult, error) {
 	// Check cache first
 	cacheKey := "query_result_" + strconv.FormatUint(uint64(queryID), 10)
-	if result, found := utils.QueryCache.Get(cacheKey); found {
+	if result, found := s.cacheService.Get(cacheKey); found {
 		return &ExecuteQueryResult{
 			Data:          result.([]map[string]interface{}),
 			Source:        "cache",
@@ -144,22 +157,25 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 		}, nil
 	}
 
-	var query models.Query
-	if err := s.db.Preload("DataSource").First(&query, queryID).Error; err != nil {
-		return nil, errors.ErrNotFound
+	// Get query
+	query, err := s.queryRepo.FindByID(queryID)
+	if err != nil {
+		return nil, err
 	}
 
+	// Check permissions
 	if !isAdmin && query.UserID != userID && !query.IsPublic {
 		return nil, errors.ErrForbidden
 	}
 
-	// 执行前验证 SQL
-	if err := utils.ValidateSQLComplete(query.SQL); err != nil {
+	// Validate SQL
+	if err := s.validationService.ValidateSQL(query.SQL); err != nil {
 		return nil, errors.WrapError(err, "Failed to execute query")
 	}
 
+	// Decrypt password if needed
 	if query.DataSource.Password != "" {
-		decryptedPassword, err := utils.DecryptAES(query.DataSource.Password)
+		decryptedPassword, err := s.encryptionService.Decrypt(query.DataSource.Password)
 		if err != nil {
 			return nil, errors.WrapError(err, "Could not decrypt password")
 		}
@@ -168,18 +184,19 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 
 	// Execute query
 	startTime := time.Now()
-	results, err := utils.ExecuteSQL(query.DataSource, query.SQL)
+	results, err := s.sqlExecutionService.ExecuteSQL(query.DataSource, query.SQL)
 	if err != nil {
 		return nil, errors.WrapError(err, "Failed to execute query")
 	}
 	executionTime := time.Since(startTime)
 
-	query.ExecCount++
-	s.db.Save(&query)
+	// Update execution count
+	s.queryRepo.IncrementExecCount(queryID)
 
-	// 使用智能缓存策略
-	utils.SetQueryCache(cacheKey, results, query.SQL)
+	// Cache results
+	s.cacheService.Set(cacheKey, results, 5*time.Minute)
 
+	// Build columns info
 	var columns []map[string]string
 	if len(results) > 0 {
 		for key := range results[0] {

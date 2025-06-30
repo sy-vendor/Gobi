@@ -29,13 +29,16 @@ type Handler struct {
 	TemplateService   *services.TemplateService
 }
 
-// NewHandler creates a new handler with dependencies.
+// NewHandler creates a new Handler instance
 func NewHandler(db *gorm.DB) *Handler {
+	// Create service factory
+	serviceFactory := services.NewServiceFactory(db)
+
 	return &Handler{
 		DB:                db,
 		UserService:       services.NewUserService(db),
 		DataSourceService: services.NewDataSourceService(db),
-		QueryService:      services.NewQueryService(db),
+		QueryService:      serviceFactory.CreateQueryService(),
 		ChartService:      services.NewChartService(db),
 		ReportService:     services.NewReportService(db),
 		TemplateService:   services.NewTemplateService(db),
