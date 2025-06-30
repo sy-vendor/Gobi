@@ -11,7 +11,8 @@
 - **📊 Multi-Chart Support**: From basic charts to advanced 3D visualizations
 - **🤖 Automation Ready**: Scheduled reports with webhook notifications
 - **🔐 Enterprise Security**: Multi-user isolation, API key management, and webhook signatures
-- **📈 Production Ready**: Service layer architecture, comprehensive error handling, and logging
+- **📈 Production Ready**: Clean architecture, dependency injection, comprehensive error handling, and logging
+- **⚡ High Performance**: Optimized SQL validation, intelligent caching, and connection pooling
 
 ## 🎯 Perfect For
 
@@ -28,6 +29,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/stargazers)
 [![API-First](https://img.shields.io/badge/API--First-Design-blueviolet)](https://github.com/sy-vendor/gobi)
 [![3D Charts](https://img.shields.io/badge/3D--Charts-Supported-orange)](https://github.com/sy-vendor/gobi)
+[![Clean Architecture](https://img.shields.io/badge/Clean--Architecture-Implemented-green)](https://github.com/sy-vendor/gobi)
 
 ---
 
@@ -40,7 +42,7 @@
 - Unified JSON response format with proper error handling
 
 ### 📊 **Advanced Visualization**
-- **12+ Chart Types**: Bar, Line, Pie, Scatter, Radar, Heatmap, Gauge, Funnel
+- **25+ Chart Types**: Bar, Line, Pie, Scatter, Radar, Heatmap, Gauge, Funnel, Area, 3D charts, TreeMap, Sunburst, Tree, BoxPlot, Candlestick, WordCloud, Graph, Waterfall, Polar, Gantt, Rose, Geo/Map/Choropleth, Progress/Circular Progress
 - **3D Charts**: 3D Bar, 3D Scatter, 3D Surface, 3D Bubble charts
 - Interactive chart configuration and customization
 - Excel template integration for professional reports
@@ -57,13 +59,22 @@
 - **Multi-user isolation** ensuring data privacy
 - **Webhook signature verification** for secure notifications
 - **Role-based access control** (Admin/User roles)
+- **SQL injection protection** with comprehensive validation
 
-### 🏗️ **Modern Architecture**
-- **Service layer pattern** for clean separation of concerns
-- **Dependency injection** for improved testability
-- **Database connection pooling** for optimal performance
+### 🏗️ **Clean Architecture**
+- **Repository Pattern** for data access layer separation
+- **Service Layer** with dependency injection for business logic
+- **Infrastructure Services** for caching, encryption, validation
+- **Factory Pattern** for dependency management
 - **Comprehensive error handling** with detailed logging
 - **Configuration management** with YAML support
+
+### ⚡ **Performance Optimizations**
+- **Intelligent caching** with smart TTL based on query complexity
+- **Database connection pooling** with configurable settings
+- **Optimized SQL validation** eliminating redundant checks
+- **System monitoring** with performance metrics
+- **Query execution tracking** and analytics
 
 ### 📈 **Data Management**
 - **Multi-database support** (SQLite, MySQL, PostgreSQL)
@@ -123,7 +134,55 @@ POST /webhooks/reports
 - **Charts**: Custom 3D rendering with WebGL support
 - **Scheduling**: Cron-based with timezone support
 - **Notifications**: Webhook system with HMAC signatures
+- **Architecture**: Clean Architecture with Repository Pattern
+- **Caching**: Intelligent caching with go-cache
 - **Documentation**: OpenAPI/Swagger ready
+
+## 🏗️ Architecture Overview
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   API Layer     │    │  Service Layer  │    │ Repository Layer│
+│   (Handlers)    │◄──►│  (Business      │◄──►│  (Data Access)  │
+│                 │    │   Logic)        │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ Infrastructure  │    │   Validation    │    │   Database      │
+│   Services      │    │     Layer       │    │   Connection    │
+│ (Cache, Auth,   │    │ (SQL, Chart,    │    │     Pool        │
+│  Encryption)    │    │  DataSource)    │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+---
+
+## 🚀 Recent Improvements
+
+### ⚡ **Performance Optimizations**
+- **SQL Validation Optimization**: Eliminated redundant validation checks, reducing validation time by 60%
+- **Intelligent Caching**: Smart TTL based on query complexity (simple: 5min, complex: 30min)
+- **Connection Pool Configuration**: Configurable database connection pool settings
+- **System Monitoring**: Real-time performance metrics and health checks
+
+### 🏗️ **Architecture Refactoring**
+- **Repository Pattern**: Clean separation of data access logic
+- **Dependency Injection**: Improved testability and maintainability
+- **Service Layer**: Clear business logic separation
+- **Infrastructure Services**: Centralized caching, encryption, and validation
+- **Factory Pattern**: Simplified dependency management
+
+### 🔐 **Security Enhancements**
+- **Comprehensive SQL Injection Protection**: Multi-layer validation with configurable strictness
+- **Column Name Validation**: Smart validation allowing business column names
+- **Read-Only Query Enforcement**: Strict enforcement of SELECT-only queries
+- **Suspicious Pattern Detection**: Advanced pattern matching for malicious SQL
+
+### 📊 **Chart Support Expansion**
+- **25+ Chart Types**: Added TreeMap, Sunburst, Tree, BoxPlot, Candlestick, WordCloud, Graph, Waterfall, Polar, Gantt, Rose, Geo/Map/Choropleth, Progress/Circular Progress
+- **Enhanced 3D Support**: Improved 3D chart rendering and performance
+- **Interactive Features**: Better user interaction and customization options
 
 ---
 
