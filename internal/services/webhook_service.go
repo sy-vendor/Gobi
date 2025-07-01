@@ -14,18 +14,26 @@ import (
 	"time"
 
 	errs "errors"
-
-	"gorm.io/gorm"
 )
 
 // WebhookService handles webhook-related business logic
 type WebhookService struct {
-	db *gorm.DB
+	webhookRepo       WebhookRepository
+	webhookTrigger    WebhookTriggerService
+	permissionService PermissionService
 }
 
 // NewWebhookService creates a new WebhookService instance
-func NewWebhookService(db *gorm.DB) *WebhookService {
-	return &WebhookService{db: db}
+func NewWebhookService(
+	webhookRepo WebhookRepository,
+	webhookTrigger WebhookTriggerService,
+	permissionService PermissionService,
+) *WebhookService {
+	return &WebhookService{
+		webhookRepo:       webhookRepo,
+		webhookTrigger:    webhookTrigger,
+		permissionService: permissionService,
+	}
 }
 
 // CreateWebhook creates a new webhook configuration
@@ -37,7 +45,7 @@ func (s *WebhookService) CreateWebhook(webhook *models.Webhook, userID uint) err
 	// Generate secret for signature verification
 	webhook.Secret = generateWebhookSecret()
 
-	if err := s.db.Create(webhook).Error; err != nil {
+	if err := s.webhookRepo.Create(webhook); err != nil {
 		return errors.WrapError(err, "Could not create webhook")
 	}
 	return nil
@@ -45,12 +53,8 @@ func (s *WebhookService) CreateWebhook(webhook *models.Webhook, userID uint) err
 
 // ListWebhooks lists all webhooks for a user (admin can list all)
 func (s *WebhookService) ListWebhooks(userID uint, isAdmin bool) ([]models.Webhook, error) {
-	var webhooks []models.Webhook
-	query := s.db
-	if !isAdmin {
-		query = query.Where("user_id = ?", userID)
-	}
-	if err := query.Find(&webhooks).Error; err != nil {
+	webhooks, err := s.webhookRepo.FindByUser(userID, isAdmin)
+	if err != nil {
 		return nil, errors.WrapError(err, "Could not list webhooks")
 	}
 	return webhooks, nil
@@ -58,26 +62,26 @@ func (s *WebhookService) ListWebhooks(userID uint, isAdmin bool) ([]models.Webho
 
 // GetWebhook gets a specific webhook by ID
 func (s *WebhookService) GetWebhook(webhookID uint, userID uint, isAdmin bool) (*models.Webhook, error) {
-	var webhook models.Webhook
-	if err := s.db.First(&webhook, webhookID).Error; err != nil {
+	webhook, err := s.webhookRepo.FindByID(webhookID)
+	if err != nil {
 		return nil, errors.ErrNotFound
 	}
-	if !isAdmin && webhook.UserID != userID {
+	if !s.permissionService.CanAccess(userID, webhookID, "webhook", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
-	return &webhook, nil
+	return webhook, nil
 }
 
 // UpdateWebhook updates a webhook configuration
 func (s *WebhookService) UpdateWebhook(webhookID uint, updates *models.Webhook, userID uint, isAdmin bool) (*models.Webhook, error) {
-	var webhook models.Webhook
-	if err := s.db.First(&webhook, webhookID).Error; err != nil {
-		if errs.Is(err, gorm.ErrRecordNotFound) {
+	webhook, err := s.webhookRepo.FindByID(webhookID)
+	if err != nil {
+		if errs.Is(err, errors.ErrNotFound) {
 			return nil, errors.ErrNotFound
 		}
 		return nil, errors.WrapError(err, "Could not fetch webhook")
 	}
-	if !isAdmin && webhook.UserID != userID {
+	if !s.permissionService.CanAccess(userID, webhookID, "webhook", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 
@@ -97,25 +101,25 @@ func (s *WebhookService) UpdateWebhook(webhookID uint, updates *models.Webhook, 
 	webhook.Active = updates.Active
 	webhook.UpdatedAt = time.Now()
 
-	if err := s.db.Save(&webhook).Error; err != nil {
+	if err := s.webhookRepo.Update(webhook); err != nil {
 		return nil, errors.WrapError(err, "Could not update webhook")
 	}
-	return &webhook, nil
+	return webhook, nil
 }
 
 // DeleteWebhook deletes a webhook
 func (s *WebhookService) DeleteWebhook(webhookID uint, userID uint, isAdmin bool) error {
-	var webhook models.Webhook
-	if err := s.db.First(&webhook, webhookID).Error; err != nil {
-		if errs.Is(err, gorm.ErrRecordNotFound) {
+	_, err := s.webhookRepo.FindByID(webhookID)
+	if err != nil {
+		if errs.Is(err, errors.ErrNotFound) {
 			return errors.ErrNotFound
 		}
 		return errors.WrapError(err, "Could not fetch webhook")
 	}
-	if !isAdmin && webhook.UserID != userID {
+	if !s.permissionService.CanAccess(userID, webhookID, "webhook", isAdmin) {
 		return errors.ErrForbidden
 	}
-	if err := s.db.Delete(&webhook).Error; err != nil {
+	if err := s.webhookRepo.Delete(webhookID); err != nil {
 		return errors.WrapError(err, "Could not delete webhook")
 	}
 	return nil
@@ -124,12 +128,20 @@ func (s *WebhookService) DeleteWebhook(webhookID uint, userID uint, isAdmin bool
 // TriggerWebhook sends a webhook notification for a specific event
 func (s *WebhookService) TriggerWebhook(event string, payload interface{}, userID uint) error {
 	// Get all active webhooks for the user that subscribe to this event
-	var webhooks []models.Webhook
-	if err := s.db.Where("user_id = ? AND active = ?", userID, true).Find(&webhooks).Error; err != nil {
+	webhooks, err := s.webhookRepo.FindByUser(userID, false) // Only user's webhooks
+	if err != nil {
 		return errors.WrapError(err, "Could not fetch webhooks")
 	}
 
+	// Filter active webhooks
+	var activeWebhooks []models.Webhook
 	for _, webhook := range webhooks {
+		if webhook.Active {
+			activeWebhooks = append(activeWebhooks, webhook)
+		}
+	}
+
+	for _, webhook := range activeWebhooks {
 		// Check if webhook subscribes to this event
 		if !s.webhookSubscribesToEvent(&webhook, event) {
 			continue
@@ -148,13 +160,13 @@ func (s *WebhookService) TriggerWebhook(event string, payload interface{}, userI
 		if err != nil {
 			delivery.Status = "failed"
 			delivery.Response = fmt.Sprintf("Failed to serialize payload: %v", err)
-			s.db.Create(delivery)
+			s.webhookRepo.CreateDelivery(delivery)
 			continue
 		}
 		delivery.Payload = string(payloadBytes)
 
 		// Save delivery record
-		if err := s.db.Create(delivery).Error; err != nil {
+		if err := s.webhookRepo.CreateDelivery(delivery); err != nil {
 			continue
 		}
 
@@ -184,7 +196,7 @@ func (s *WebhookService) sendWebhook(webhook *models.Webhook, delivery *models.W
 	// Final failure
 	delivery.Status = "failed"
 	delivery.Attempts = maxRetries + 1
-	s.db.Save(delivery)
+	s.webhookRepo.UpdateDelivery(delivery)
 }
 
 // sendSingleWebhook sends a single webhook request
@@ -248,7 +260,7 @@ func (s *WebhookService) sendSingleWebhook(webhook *models.Webhook, delivery *mo
 	now := time.Now()
 	delivery.SentAt = &now
 
-	s.db.Save(delivery)
+	s.webhookRepo.UpdateDelivery(delivery)
 
 	return resp.StatusCode < 400
 }
@@ -288,15 +300,19 @@ func generateWebhookSecret() string {
 
 // ListWebhookDeliveries lists webhook delivery attempts
 func (s *WebhookService) ListWebhookDeliveries(webhookID uint, userID uint, isAdmin bool) ([]models.WebhookDelivery, error) {
-	var deliveries []models.WebhookDelivery
-	query := s.db.Preload("Webhook").Where("webhook_id = ?", webhookID)
-
+	// Check permission first
 	if !isAdmin {
-		query = query.Joins("JOIN webhooks ON webhook_deliveries.webhook_id = webhooks.id").
-			Where("webhooks.user_id = ?", userID)
+		_, err := s.webhookRepo.FindByID(webhookID)
+		if err != nil {
+			return nil, errors.ErrNotFound
+		}
+		if !s.permissionService.CanAccess(userID, webhookID, "webhook", isAdmin) {
+			return nil, errors.ErrForbidden
+		}
 	}
 
-	if err := query.Order("created_at DESC").Limit(100).Find(&deliveries).Error; err != nil {
+	deliveries, err := s.webhookRepo.ListDeliveries(webhookID)
+	if err != nil {
 		return nil, errors.WrapError(err, "Could not list webhook deliveries")
 	}
 	return deliveries, nil

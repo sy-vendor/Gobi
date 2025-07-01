@@ -62,3 +62,35 @@ type WebhookTriggerService interface {
 	TriggerWebhook(url string, payload interface{}) error
 	ValidateWebhookURL(url string) error
 }
+
+// ReportRepository defines the interface for report data operations
+type ReportRepository interface {
+	Create(report *models.Report) error
+	FindByUser(userID uint, isAdmin bool) ([]models.Report, error)
+	FindByID(reportID uint) (*models.Report, error)
+	Update(report *models.Report) error
+	Delete(reportID uint) error
+	UpdateStatus(reportID uint, status string, error string) error
+}
+
+// TemplateRepository defines the interface for template data operations
+type TemplateRepository interface {
+	Create(template *models.ExcelTemplate) error
+	FindByUser(userID uint, isAdmin bool) ([]models.ExcelTemplate, error)
+	FindByID(templateID uint) (*models.ExcelTemplate, error)
+	Update(template *models.ExcelTemplate) error
+	Delete(templateID uint) error
+	GetStats() (map[string]interface{}, error)
+}
+
+// WebhookRepository defines the interface for webhook data operations
+type WebhookRepository interface {
+	Create(webhook *models.Webhook) error
+	FindByUser(userID uint, isAdmin bool) ([]models.Webhook, error)
+	FindByID(webhookID uint) (*models.Webhook, error)
+	Update(webhook *models.Webhook) error
+	Delete(webhookID uint) error
+	CreateDelivery(delivery *models.WebhookDelivery) error
+	UpdateDelivery(delivery *models.WebhookDelivery) error
+	ListDeliveries(webhookID uint) ([]models.WebhookDelivery, error)
+}

@@ -3,29 +3,36 @@ package services
 import (
 	"gobi/internal/models"
 	"gobi/pkg/errors"
-	"gobi/pkg/utils"
 	"time"
 
 	errs "errors"
-
-	"gorm.io/gorm"
 )
 
 // ReportService handles report-related business logic
 type ReportService struct {
-	db *gorm.DB
+	reportRepo        ReportRepository
+	reportGenerator   ReportGeneratorService
+	permissionService PermissionService
 }
 
 // NewReportService creates a new ReportService instance
-func NewReportService(db *gorm.DB) *ReportService {
-	return &ReportService{db: db}
+func NewReportService(
+	reportRepo ReportRepository,
+	reportGenerator ReportGeneratorService,
+	permissionService PermissionService,
+) *ReportService {
+	return &ReportService{
+		reportRepo:        reportRepo,
+		reportGenerator:   reportGenerator,
+		permissionService: permissionService,
+	}
 }
 
 // CreateReport creates a new report
 func (s *ReportService) CreateReport(report *models.Report, userID uint) error {
 	report.UserID = userID
 
-	if err := s.db.Create(report).Error; err != nil {
+	if err := s.reportRepo.Create(report); err != nil {
 		return errors.WrapError(err, "Could not create report")
 	}
 
@@ -34,14 +41,8 @@ func (s *ReportService) CreateReport(report *models.Report, userID uint) error {
 
 // ListReports retrieves reports based on user permissions
 func (s *ReportService) ListReports(userID uint, isAdmin bool) ([]models.Report, error) {
-	var reports []models.Report
-
-	query := s.db.Preload("User").Model(&models.Report{})
-	if !isAdmin {
-		query = query.Where("user_id = ?", userID)
-	}
-
-	if err := query.Find(&reports).Error; err != nil {
+	reports, err := s.reportRepo.FindByUser(userID, isAdmin)
+	if err != nil {
 		return nil, errors.WrapError(err, "Could not fetch reports")
 	}
 
@@ -50,32 +51,32 @@ func (s *ReportService) ListReports(userID uint, isAdmin bool) ([]models.Report,
 
 // GetReport retrieves a specific report
 func (s *ReportService) GetReport(reportID uint, userID uint, isAdmin bool) (*models.Report, error) {
-	var report models.Report
-	if err := s.db.Preload("User").First(&report, reportID).Error; err != nil {
-		if errs.Is(err, gorm.ErrRecordNotFound) {
+	report, err := s.reportRepo.FindByID(reportID)
+	if err != nil {
+		if errs.Is(err, errors.ErrNotFound) {
 			return nil, errors.ErrNotFound
 		}
 		return nil, errors.WrapError(err, "Could not fetch report")
 	}
 
-	if !isAdmin && report.UserID != userID {
+	if !s.permissionService.CanAccess(userID, reportID, "report", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 
-	return &report, nil
+	return report, nil
 }
 
 // UpdateReport updates a report
 func (s *ReportService) UpdateReport(reportID uint, updates *models.Report, userID uint, isAdmin bool) (*models.Report, error) {
-	var report models.Report
-	if err := s.db.First(&report, reportID).Error; err != nil {
-		if errs.Is(err, gorm.ErrRecordNotFound) {
+	report, err := s.reportRepo.FindByID(reportID)
+	if err != nil {
+		if errs.Is(err, errors.ErrNotFound) {
 			return nil, errors.ErrNotFound
 		}
 		return nil, errors.WrapError(err, "Could not fetch report")
 	}
 
-	if !isAdmin && report.UserID != userID {
+	if !s.permissionService.CanAccess(userID, reportID, "report", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 
@@ -89,28 +90,28 @@ func (s *ReportService) UpdateReport(reportID uint, updates *models.Report, user
 	// Note: We don't update Content, GeneratedAt, Status, Error as these are managed by the system
 	// during report generation
 
-	if err := s.db.Save(&report).Error; err != nil {
+	if err := s.reportRepo.Update(report); err != nil {
 		return nil, errors.WrapError(err, "Could not update report")
 	}
 
-	return &report, nil
+	return report, nil
 }
 
 // DeleteReport deletes a report
 func (s *ReportService) DeleteReport(reportID uint, userID uint, isAdmin bool) error {
-	var report models.Report
-	if err := s.db.First(&report, reportID).Error; err != nil {
-		if errs.Is(err, gorm.ErrRecordNotFound) {
+	_, err := s.reportRepo.FindByID(reportID)
+	if err != nil {
+		if errs.Is(err, errors.ErrNotFound) {
 			return errors.ErrNotFound
 		}
 		return errors.WrapError(err, "Could not fetch report")
 	}
 
-	if !isAdmin && report.UserID != userID {
+	if !s.permissionService.CanAccess(userID, reportID, "report", isAdmin) {
 		return errors.ErrForbidden
 	}
 
-	if err := s.db.Delete(&report).Error; err != nil {
+	if err := s.reportRepo.Delete(reportID); err != nil {
 		return errors.WrapError(err, "Could not delete report")
 	}
 
@@ -131,29 +132,31 @@ type GenerateReportResult struct {
 // GenerateReport generates a report based on the report configuration
 func (s *ReportService) GenerateReport(reportID uint, userID uint, isAdmin bool) (*GenerateReportResult, error) {
 	// Get report with all related data
-	var report models.Report
-	if err := s.db.Preload("User").First(&report, reportID).Error; err != nil {
+	report, err := s.reportRepo.FindByID(reportID)
+	if err != nil {
 		return nil, errors.ErrNotFound
 	}
 
 	// Permission check
-	if !isAdmin && report.UserID != userID {
+	if !s.permissionService.CanAccess(userID, reportID, "report", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 
 	// Update report status
 	report.Status = "generating"
 	report.GeneratedAt = time.Now()
-	s.db.Save(&report)
+	if err := s.reportRepo.UpdateStatus(reportID, "generating", ""); err != nil {
+		return nil, errors.WrapError(err, "Could not update report status")
+	}
 
 	// For now, we'll create a simple Excel report
 	// In a real implementation, you would use the actual template and data
-	content, err := utils.GenerateExcelFromTemplate("[]", []byte{}, "report")
+	content, err := s.reportGenerator.GenerateExcelFromTemplate("[]", []byte{}, "report")
 	if err != nil {
 		// Update report status to failed
-		report.Status = "failed"
-		report.Error = err.Error()
-		s.db.Save(&report)
+		if updateErr := s.reportRepo.UpdateStatus(reportID, "failed", err.Error()); updateErr != nil {
+			// Log the error but don't fail the operation
+		}
 
 		return &GenerateReportResult{
 			ReportID:     reportID,
@@ -166,7 +169,9 @@ func (s *ReportService) GenerateReport(reportID uint, userID uint, isAdmin bool)
 	report.Status = "success"
 	report.Content = content
 	report.Error = ""
-	s.db.Save(&report)
+	if err := s.reportRepo.Update(report); err != nil {
+		return nil, errors.WrapError(err, "Could not update report")
+	}
 
 	return &GenerateReportResult{
 		ReportID:    reportID,
@@ -180,12 +185,12 @@ func (s *ReportService) GenerateReport(reportID uint, userID uint, isAdmin bool)
 
 // GetReportStatus gets the current status of a report
 func (s *ReportService) GetReportStatus(reportID uint, userID uint, isAdmin bool) (*GenerateReportResult, error) {
-	var report models.Report
-	if err := s.db.First(&report, reportID).Error; err != nil {
+	report, err := s.reportRepo.FindByID(reportID)
+	if err != nil {
 		return nil, errors.ErrNotFound
 	}
 
-	if !isAdmin && report.UserID != userID {
+	if !s.permissionService.CanAccess(userID, reportID, "report", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 

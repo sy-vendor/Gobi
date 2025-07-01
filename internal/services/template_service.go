@@ -3,26 +3,30 @@ package services
 import (
 	"gobi/internal/models"
 	"gobi/pkg/errors"
-	"time"
-
-	"gorm.io/gorm"
 )
 
 // TemplateService handles template-related business logic
 type TemplateService struct {
-	db *gorm.DB
+	templateRepo      TemplateRepository
+	permissionService PermissionService
 }
 
 // NewTemplateService creates a new TemplateService instance
-func NewTemplateService(db *gorm.DB) *TemplateService {
-	return &TemplateService{db: db}
+func NewTemplateService(
+	templateRepo TemplateRepository,
+	permissionService PermissionService,
+) *TemplateService {
+	return &TemplateService{
+		templateRepo:      templateRepo,
+		permissionService: permissionService,
+	}
 }
 
 // CreateTemplate creates a new template
 func (s *TemplateService) CreateTemplate(template *models.ExcelTemplate, userID uint) error {
 	template.UserID = userID
 
-	if err := s.db.Create(template).Error; err != nil {
+	if err := s.templateRepo.Create(template); err != nil {
 		return errors.WrapError(err, "Could not create template")
 	}
 
@@ -31,14 +35,8 @@ func (s *TemplateService) CreateTemplate(template *models.ExcelTemplate, userID 
 
 // ListTemplates retrieves templates based on user permissions
 func (s *TemplateService) ListTemplates(userID uint, isAdmin bool) ([]models.ExcelTemplate, error) {
-	var templates []models.ExcelTemplate
-
-	query := s.db.Preload("User").Model(&models.ExcelTemplate{})
-	if !isAdmin {
-		query = query.Where("user_id = ?", userID)
-	}
-
-	if err := query.Find(&templates).Error; err != nil {
+	templates, err := s.templateRepo.FindByUser(userID, isAdmin)
+	if err != nil {
 		return nil, errors.WrapError(err, "Could not fetch templates")
 	}
 
@@ -52,29 +50,29 @@ func (s *TemplateService) ListTemplates(userID uint, isAdmin bool) ([]models.Exc
 
 // GetTemplate retrieves a specific template
 func (s *TemplateService) GetTemplate(templateID uint, userID uint, isAdmin bool) (*models.ExcelTemplate, error) {
-	var template models.ExcelTemplate
-	if err := s.db.Preload("User").First(&template, templateID).Error; err != nil {
+	template, err := s.templateRepo.FindByID(templateID)
+	if err != nil {
 		return nil, errors.ErrNotFound
 	}
 
-	if !isAdmin && template.UserID != userID {
+	if !s.permissionService.CanAccess(userID, templateID, "template", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 
 	// Do not return template content in detail view
 	template.Template = nil
 
-	return &template, nil
+	return template, nil
 }
 
 // UpdateTemplate updates a template
 func (s *TemplateService) UpdateTemplate(templateID uint, updates *models.ExcelTemplate, userID uint, isAdmin bool) (*models.ExcelTemplate, error) {
-	var template models.ExcelTemplate
-	if err := s.db.First(&template, templateID).Error; err != nil {
+	template, err := s.templateRepo.FindByID(templateID)
+	if err != nil {
 		return nil, errors.ErrNotFound
 	}
 
-	if !isAdmin && template.UserID != userID {
+	if !s.permissionService.CanAccess(userID, templateID, "template", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 
@@ -86,28 +84,28 @@ func (s *TemplateService) UpdateTemplate(templateID uint, updates *models.ExcelT
 		template.Description = updates.Description
 	}
 
-	if err := s.db.Save(&template).Error; err != nil {
+	if err := s.templateRepo.Update(template); err != nil {
 		return nil, errors.WrapError(err, "Could not update template")
 	}
 
 	// Do not return template content
 	template.Template = nil
 
-	return &template, nil
+	return template, nil
 }
 
 // DeleteTemplate deletes a template
 func (s *TemplateService) DeleteTemplate(templateID uint, userID uint, isAdmin bool) error {
-	var template models.ExcelTemplate
-	if err := s.db.First(&template, templateID).Error; err != nil {
+	_, err := s.templateRepo.FindByID(templateID)
+	if err != nil {
 		return errors.ErrNotFound
 	}
 
-	if !isAdmin && template.UserID != userID {
+	if !s.permissionService.CanAccess(userID, templateID, "template", isAdmin) {
 		return errors.ErrForbidden
 	}
 
-	if err := s.db.Delete(&template).Error; err != nil {
+	if err := s.templateRepo.Delete(templateID); err != nil {
 		return errors.WrapError(err, "Could not delete template")
 	}
 
@@ -116,54 +114,24 @@ func (s *TemplateService) DeleteTemplate(templateID uint, userID uint, isAdmin b
 
 // DownloadTemplate retrieves a template for download
 func (s *TemplateService) DownloadTemplate(templateID uint, userID uint, isAdmin bool) (*models.ExcelTemplate, error) {
-	var template models.ExcelTemplate
-	if err := s.db.First(&template, templateID).Error; err != nil {
+	template, err := s.templateRepo.FindByID(templateID)
+	if err != nil {
 		return nil, errors.ErrNotFound
 	}
 
-	if !isAdmin && template.UserID != userID {
+	if !s.permissionService.CanAccess(userID, templateID, "template", isAdmin) {
 		return nil, errors.ErrForbidden
 	}
 
-	return &template, nil
+	return template, nil
 }
 
 // GetDashboardStats retrieves dashboard statistics
 func (s *TemplateService) GetDashboardStats() (map[string]interface{}, error) {
-	var totalQueries int64
-	var totalCharts int64
-	var totalUsers int64
-	var todayQueries int64
-
-	today := time.Now().Format("2006-01-02")
-	s.db.Model(&models.Query{}).Count(&totalQueries)
-	s.db.Model(&models.Chart{}).Count(&totalCharts)
-	s.db.Model(&models.User{}).Count(&totalUsers)
-	s.db.Model(&models.Query{}).Where("DATE(created_at) = ?", today).Count(&todayQueries)
-
-	// 查询趋势（最近7天每天的查询数）
-	queryTrends := []map[string]interface{}{}
-	for i := 6; i >= 0; i-- {
-		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
-		var count int64
-		s.db.Model(&models.Query{}).Where("DATE(created_at) = ?", date).Count(&count)
-		queryTrends = append(queryTrends, map[string]interface{}{"date": date, "count": count})
+	stats, err := s.templateRepo.GetStats()
+	if err != nil {
+		return nil, errors.WrapError(err, "Could not fetch dashboard stats")
 	}
 
-	// 热门查询（执行次数最多的前5个查询）
-	type HotQuery struct {
-		Name  string
-		Count int64
-	}
-	hotQueries := []HotQuery{}
-	s.db.Table("queries").Select("name, exec_count as count").Order("exec_count desc").Limit(5).Scan(&hotQueries)
-
-	return map[string]interface{}{
-		"totalQueries": totalQueries,
-		"totalCharts":  totalCharts,
-		"totalUsers":   totalUsers,
-		"todayQueries": todayQueries,
-		"queryTrends":  queryTrends,
-		"hotQueries":   hotQueries,
-	}, nil
+	return stats, nil
 }

@@ -5,6 +5,9 @@ import (
 	"gobi/config"
 	"gobi/internal/handlers"
 	"gobi/internal/middleware"
+	"gobi/internal/repositories"
+	"gobi/internal/services"
+	"gobi/internal/services/infrastructure"
 	"gobi/pkg/database"
 	"gobi/pkg/utils"
 	"log"
@@ -44,9 +47,36 @@ func main() {
 	utils.InitReportGenerator()
 	defer utils.StopReportGenerator()
 
+	// Create infrastructure services
+	cacheService := infrastructure.NewCacheService()
+	validationService := infrastructure.NewValidationService()
+	encryptionService := infrastructure.NewEncryptionService()
+	authService := infrastructure.NewAuthService()
+
+	// Create user repository for permission service
+	userRepo := repositories.NewUserRepository(db)
+	permissionService := infrastructure.NewPermissionService(userRepo)
+
+	sqlExecutionService := infrastructure.NewSQLExecutionService()
+	reportGeneratorService := infrastructure.NewReportGeneratorService()
+	webhookTriggerService := infrastructure.NewWebhookTriggerService()
+
+	// Create service factory
+	serviceFactory := services.NewServiceFactory(
+		db,
+		cacheService,
+		validationService,
+		encryptionService,
+		authService,
+		permissionService,
+		sqlExecutionService,
+		reportGeneratorService,
+		webhookTriggerService,
+	)
+
 	h := handlers.NewHandler(db)
-	reportHandler := handlers.NewReportHandler(db)
-	webhookHandler := handlers.NewWebhookHandler(db)
+	reportHandler := handlers.NewReportHandler(db, serviceFactory)
+	webhookHandler := handlers.NewWebhookHandler(db, serviceFactory)
 
 	r := gin.New()
 

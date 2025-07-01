@@ -24,10 +24,10 @@ type ReportHandler struct {
 }
 
 // NewReportHandler creates a new ReportHandler.
-func NewReportHandler(db *gorm.DB) *ReportHandler {
+func NewReportHandler(db *gorm.DB, serviceFactory *services.ServiceFactory) *ReportHandler {
 	return &ReportHandler{
 		DB:                      db,
-		ReportService:           services.NewReportService(db),
+		ReportService:           serviceFactory.CreateReportService(),
 		ReportScheduleService:   services.NewReportScheduleService(db),
 		ReportGenerationService: services.NewReportGenerationService(db),
 	}

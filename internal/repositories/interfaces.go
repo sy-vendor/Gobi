@@ -30,6 +30,7 @@ type ReportRepository interface {
 	FindByUser(userID uint, isAdmin bool) ([]models.Report, error)
 	Update(report *models.Report) error
 	Delete(id uint) error
+	UpdateStatus(reportID uint, status string, error string) error
 }
 
 // UserRepository defines the interface for user data access
@@ -62,4 +63,26 @@ type APIKeyRepository interface {
 	FindByUser(userID uint, isAdmin bool) ([]models.APIKey, error)
 	Update(key *models.APIKey) error
 	Delete(id uint) error
+}
+
+// TemplateRepository defines the interface for template data access
+type TemplateRepository interface {
+	Create(template *models.ExcelTemplate) error
+	FindByID(id uint) (*models.ExcelTemplate, error)
+	FindByUser(userID uint, isAdmin bool) ([]models.ExcelTemplate, error)
+	Update(template *models.ExcelTemplate) error
+	Delete(id uint) error
+	GetStats() (map[string]interface{}, error)
+}
+
+// WebhookRepository defines the interface for webhook data access
+type WebhookRepository interface {
+	Create(webhook *models.Webhook) error
+	FindByID(id uint) (*models.Webhook, error)
+	FindByUser(userID uint, isAdmin bool) ([]models.Webhook, error)
+	Update(webhook *models.Webhook) error
+	Delete(id uint) error
+	CreateDelivery(delivery *models.WebhookDelivery) error
+	UpdateDelivery(delivery *models.WebhookDelivery) error
+	ListDeliveries(webhookID uint) ([]models.WebhookDelivery, error)
 }

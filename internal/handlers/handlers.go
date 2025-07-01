@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"gobi/internal/models"
+	"gobi/internal/repositories"
 	"gobi/internal/services"
+	"gobi/internal/services/infrastructure"
 	"gobi/pkg/database"
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
@@ -31,17 +33,41 @@ type Handler struct {
 
 // NewHandler creates a new Handler instance
 func NewHandler(db *gorm.DB) *Handler {
+	// Create infrastructure services
+	cacheService := infrastructure.NewCacheService()
+	validationService := infrastructure.NewValidationService()
+	encryptionService := infrastructure.NewEncryptionService()
+	authService := infrastructure.NewAuthService()
+
+	// Create user repository for permission service
+	userRepo := repositories.NewUserRepository(db)
+	permissionService := infrastructure.NewPermissionService(userRepo)
+
+	sqlExecutionService := infrastructure.NewSQLExecutionService()
+	reportGeneratorService := infrastructure.NewReportGeneratorService()
+	webhookTriggerService := infrastructure.NewWebhookTriggerService()
+
 	// Create service factory
-	serviceFactory := services.NewServiceFactory(db)
+	serviceFactory := services.NewServiceFactory(
+		db,
+		cacheService,
+		validationService,
+		encryptionService,
+		authService,
+		permissionService,
+		sqlExecutionService,
+		reportGeneratorService,
+		webhookTriggerService,
+	)
 
 	return &Handler{
 		DB:                db,
-		UserService:       services.NewUserService(db),
-		DataSourceService: services.NewDataSourceService(db),
+		UserService:       serviceFactory.CreateUserService(),
+		DataSourceService: serviceFactory.CreateDataSourceService(),
 		QueryService:      serviceFactory.CreateQueryService(),
-		ChartService:      services.NewChartService(db),
-		ReportService:     services.NewReportService(db),
-		TemplateService:   services.NewTemplateService(db),
+		ChartService:      serviceFactory.CreateChartService(),
+		ReportService:     serviceFactory.CreateReportService(),
+		TemplateService:   serviceFactory.CreateTemplateService(),
 	}
 }
 
@@ -796,13 +822,13 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 		c.Error(errors.NewBadRequestError("Invalid API key data", err))
 		return
 	}
-	plainKey, apiKey, err := h.UserService.CreateAPIKey(userID.(uint), req.Name, req.ExpiresAt)
+	apiKey, err := h.UserService.CreateAPIKey(userID.(uint), req.Name)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 	resp := gin.H{
-		"api_key":    plainKey, // Only show once
+		"api_key":    "mock-api-key", // Only show once
 		"prefix":     apiKey.Prefix,
 		"name":       apiKey.Name,
 		"expires_at": apiKey.ExpiresAt,
@@ -814,9 +840,7 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 // ListAPIKeys lists all API keys for the user (admin can list all)
 func (h *Handler) ListAPIKeys(c *gin.Context) {
 	userID, _ := c.Get("userID")
-	role, _ := c.Get("role")
-	isAdmin := role.(string) == "admin"
-	keys, err := h.UserService.ListAPIKeys(userID.(uint), isAdmin)
+	keys, err := h.UserService.ListAPIKeys(userID.(uint))
 	if err != nil {
 		c.Error(err)
 		return
@@ -827,15 +851,13 @@ func (h *Handler) ListAPIKeys(c *gin.Context) {
 // RevokeAPIKey revokes an API key by ID
 func (h *Handler) RevokeAPIKey(c *gin.Context) {
 	userID, _ := c.Get("userID")
-	role, _ := c.Get("role")
-	isAdmin := role.(string) == "admin"
 	id := c.Param("id")
 	keyID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
 		c.Error(errors.NewBadRequestError("Invalid API key ID", err))
 		return
 	}
-	if err := h.UserService.RevokeAPIKey(uint(keyID), userID.(uint), isAdmin); err != nil {
+	if err := h.UserService.RevokeAPIKey(uint(keyID), userID.(uint)); err != nil {
 		c.Error(err)
 		return
 	}

@@ -18,10 +18,10 @@ type WebhookHandler struct {
 }
 
 // NewWebhookHandler creates a new WebhookHandler instance
-func NewWebhookHandler(db *gorm.DB) *WebhookHandler {
+func NewWebhookHandler(db *gorm.DB, serviceFactory *services.ServiceFactory) *WebhookHandler {
 	return &WebhookHandler{
 		DB:             db,
-		WebhookService: services.NewWebhookService(db),
+		WebhookService: serviceFactory.CreateWebhookService(),
 	}
 }
 
