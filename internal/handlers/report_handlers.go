@@ -564,12 +564,5 @@ func (h *ReportHandler) DownloadReport(c *gin.Context) {
 
 // calculateNextRunFromCron calculates the next run time based on cron pattern
 func calculateNextRunFromCron(cronPattern string) time.Time {
-	now := time.Now()
-	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := parser.Parse(cronPattern)
-	if err != nil {
-		// 返回一个零时时间或者一个表示错误的将来时间
-		return time.Time{}
-	}
-	return schedule.Next(now)
+	return utils.CalculateNextRunFromCron(cronPattern, time.Time{})
 }

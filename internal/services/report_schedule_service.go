@@ -3,9 +3,9 @@ package services
 import (
 	"gobi/internal/models"
 	"gobi/pkg/errors"
+	"gobi/pkg/utils"
 	"time"
 
-	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 )
 
@@ -22,9 +22,7 @@ func NewReportScheduleService(db *gorm.DB) *ReportScheduleService {
 // CreateReportSchedule creates a new report schedule
 func (s *ReportScheduleService) CreateReportSchedule(schedule *models.ReportSchedule, userID uint) error {
 	// Validate cron pattern
-	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	_, err := parser.Parse(schedule.CronPattern)
-	if err != nil {
+	if err := utils.ValidateCronPattern(schedule.CronPattern); err != nil {
 		return errors.NewBadRequestError("Invalid cron pattern", err)
 	}
 
@@ -100,9 +98,7 @@ func (s *ReportScheduleService) UpdateReportSchedule(scheduleID uint, updates *m
 		schedule.Templates = updates.Templates
 	}
 	if updates.CronPattern != "" {
-		parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-		_, err := parser.Parse(updates.CronPattern)
-		if err != nil {
+		if err := utils.ValidateCronPattern(updates.CronPattern); err != nil {
 			return nil, errors.NewBadRequestError("Invalid cron pattern", err)
 		}
 		schedule.CronPattern = updates.CronPattern
@@ -136,11 +132,5 @@ func (s *ReportScheduleService) DeleteReportSchedule(scheduleID uint, userID uin
 
 // calculateNextRunFromCron calculates the next run time based on cron pattern
 func (s *ReportScheduleService) calculateNextRunFromCron(cronPattern string) time.Time {
-	now := time.Now()
-	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := parser.Parse(cronPattern)
-	if err != nil {
-		return now.Add(24 * time.Hour) // Default to next day if invalid
-	}
-	return schedule.Next(now)
+	return utils.CalculateNextRunFromCron(cronPattern, time.Now().Add(24*time.Hour))
 }

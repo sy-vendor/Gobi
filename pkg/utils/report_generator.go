@@ -208,10 +208,5 @@ func generateReport(schedule *models.ReportSchedule) {
 
 // calculateNextRunFromCron calculates the next run time based on cron pattern
 func calculateNextRunFromCron(cronPattern string) time.Time {
-	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := parser.Parse(cronPattern)
-	if err != nil {
-		return time.Now()
-	}
-	return schedule.Next(time.Now())
+	return CalculateNextRunFromCron(cronPattern, time.Now())
 }

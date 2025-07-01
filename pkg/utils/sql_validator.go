@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"gobi/pkg/security"
 	"regexp"
 	"strings"
 	"sync"
@@ -14,6 +15,7 @@ type SQLValidator struct {
 	allowedFunctions       map[string]bool
 	blockedKeywords        map[string]bool
 	blockedFunctions       map[string]bool
+	suspiciousPatterns     []string
 	strictColumnValidation bool
 }
 
@@ -32,38 +34,35 @@ func GetGlobalSQLValidator() *SQLValidator {
 
 // NewSQLValidator creates a new SQL validator with default security rules
 func NewSQLValidator() *SQLValidator {
+	config := security.GetGlobalSQLConfig()
+
+	// Convert slices to maps for faster lookup
+	allowedKeywordsMap := make(map[string]bool)
+	for _, keyword := range config.GetAllowedKeywords() {
+		allowedKeywordsMap[keyword] = true
+	}
+
+	allowedFunctionsMap := make(map[string]bool)
+	for _, function := range config.GetAllowedFunctions() {
+		allowedFunctionsMap[function] = true
+	}
+
+	blockedKeywordsMap := make(map[string]bool)
+	for _, keyword := range config.GetBlockedKeywords() {
+		blockedKeywordsMap[keyword] = true
+	}
+
+	blockedFunctionsMap := make(map[string]bool)
+	for _, function := range config.GetBlockedFunctions() {
+		blockedFunctionsMap[function] = true
+	}
+
 	return &SQLValidator{
-		allowedKeywords: map[string]bool{
-			"SELECT": true, "FROM": true, "WHERE": true, "AND": true, "OR": true,
-			"ORDER": true, "BY": true, "GROUP": true, "HAVING": true, "LIMIT": true,
-			"OFFSET": true, "JOIN": true, "LEFT": true, "RIGHT": true, "INNER": true,
-			"OUTER": true, "ON": true, "AS": true, "DISTINCT": true, "COUNT": true,
-			"SUM": true, "AVG": true, "MIN": true, "MAX": true, "CASE": true,
-			"WHEN": true, "THEN": true, "ELSE": true, "END": true, "IN": true,
-			"NOT": true, "LIKE": true, "IS": true, "NULL": true, "BETWEEN": true,
-			"ASC": true, "DESC": true, "TOP": true, "FIRST": true, "LAST": true,
-		},
-		allowedFunctions: map[string]bool{
-			"COUNT": true, "SUM": true, "AVG": true, "MIN": true, "MAX": true,
-			"UPPER": true, "LOWER": true, "TRIM": true, "LENGTH": true, "SUBSTR": true,
-			"CONCAT": true, "COALESCE": true, "NULLIF": true, "ROUND": true,
-			"DATE": true, "DATETIME": true, "STRFTIME": true, "JULIANDAY": true,
-			"YEAR": true, "MONTH": true, "DAY": true, "HOUR": true, "MINUTE": true,
-		},
-		blockedKeywords: map[string]bool{
-			"DROP": true, "DELETE": true, "UPDATE": true, "INSERT": true, "CREATE": true,
-			"ALTER": true, "TRUNCATE": true, "EXEC": true, "EXECUTE": true, "EXECUTE_IMMEDIATE": true,
-			"UNION": true, "UNION_ALL": true, "INTERSECT": true, "EXCEPT": true,
-			"GRANT": true, "REVOKE": true, "COMMIT": true, "ROLLBACK": true, "SAVEPOINT": true,
-			"BEGIN": true, "TRANSACTION": true, "LOCK": true, "UNLOCK": true,
-			"SHUTDOWN": true, "KILL": true, "PROCESS": true, "SHOW": true, "DESCRIBE": true,
-			"EXPLAIN": true, "ANALYZE": true, "VACUUM": true, "REINDEX": true,
-		},
-		blockedFunctions: map[string]bool{
-			"LOAD_FILE": true, "SLEEP": true, "BENCHMARK": true, "UPDATEXML": true,
-			"EXTRACTVALUE": true, "USER": true, "DATABASE": true, "VERSION": true,
-			"CONNECTION_ID": true, "LAST_INSERT_ID": true, "ROW_COUNT": true,
-		},
+		allowedKeywords:        allowedKeywordsMap,
+		allowedFunctions:       allowedFunctionsMap,
+		blockedKeywords:        blockedKeywordsMap,
+		blockedFunctions:       blockedFunctionsMap,
+		suspiciousPatterns:     config.GetSuspiciousPatterns(),
 		strictColumnValidation: false, // 默认关闭严格列名验证
 	}
 }
@@ -226,18 +225,7 @@ func (v *SQLValidator) checkBlockedFunctions(sql string) error {
 
 // checkSuspiciousPatterns checks for suspicious SQL patterns
 func (v *SQLValidator) checkSuspiciousPatterns(sql string) error {
-	suspiciousPatterns := []string{
-		"1=1", "TRUE", "FALSE",
-		"OR 1", "OR TRUE", "OR FALSE",
-		"AND 1", "AND TRUE", "AND FALSE",
-		"';--", "';/*", "';#",
-		"UNION SELECT", "UNION ALL SELECT",
-		"INFORMATION_SCHEMA",
-		"SYSTEM_TABLES",
-		"DUAL",
-	}
-
-	for _, pattern := range suspiciousPatterns {
+	for _, pattern := range v.suspiciousPatterns {
 		if strings.Contains(sql, pattern) {
 			return fmt.Errorf("suspicious SQL pattern detected: %s", pattern)
 		}

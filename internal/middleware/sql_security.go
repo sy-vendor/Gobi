@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"gobi/pkg/errors"
+	"gobi/pkg/security"
 	"gobi/pkg/utils"
 	"strings"
 
@@ -47,16 +48,20 @@ func SQLSecurityMiddleware() gin.HandlerFunc {
 
 // containsSuspiciousSQLPattern checks if a string contains suspicious SQL patterns
 func containsSuspiciousSQLPattern(input string) bool {
-	suspiciousPatterns := []string{
+	config := security.GetGlobalSQLConfig()
+	suspiciousPatterns := config.GetSuspiciousPatterns()
+
+	// Add additional patterns for middleware
+	additionalPatterns := []string{
 		"SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER",
 		"UNION", "EXEC", "EXECUTE", "SCRIPT", "JAVASCRIPT", "VBSCRIPT",
 		"<", ">", "\"", "'", ";", "--", "/*", "*/", "#",
-		"1=1", "TRUE", "FALSE", "OR 1", "AND 1",
-		"INFORMATION_SCHEMA", "SYSTEM_TABLES", "DUAL",
 	}
 
+	allPatterns := append(suspiciousPatterns, additionalPatterns...)
+
 	upperInput := strings.ToUpper(input)
-	for _, pattern := range suspiciousPatterns {
+	for _, pattern := range allPatterns {
 		if strings.Contains(upperInput, pattern) {
 			return true
 		}
