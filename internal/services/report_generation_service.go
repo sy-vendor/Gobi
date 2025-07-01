@@ -2,26 +2,36 @@ package services
 
 import (
 	"encoding/json"
+	errs "errors"
 	"fmt"
 	"gobi/internal/models"
+	"gobi/internal/repositories"
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
 	"strconv"
 	"time"
-
-	errs "errors"
 
 	"gorm.io/gorm"
 )
 
 // ReportGenerationService handles report generation business logic
 type ReportGenerationService struct {
-	db *gorm.DB
+	db             *gorm.DB
+	webhookRepo    repositories.WebhookRepository
+	webhookTrigger WebhookTriggerService
 }
 
 // NewReportGenerationService creates a new ReportGenerationService instance
-func NewReportGenerationService(db *gorm.DB) *ReportGenerationService {
-	return &ReportGenerationService{db: db}
+func NewReportGenerationService(
+	db *gorm.DB,
+	webhookRepo repositories.WebhookRepository,
+	webhookTrigger WebhookTriggerService,
+) *ReportGenerationService {
+	return &ReportGenerationService{
+		db:             db,
+		webhookRepo:    webhookRepo,
+		webhookTrigger: webhookTrigger,
+	}
 }
 
 // GenerateExcelReport generates an Excel report from chart data and template
@@ -55,12 +65,7 @@ func (s *ReportGenerationService) GenerateExcelReport(chartID uint, templateID u
 	}
 
 	// Generate Excel report
-	excelBytes, err := utils.GenerateExcelFromTemplate(chart.Data, template.Template, strconv.Itoa(int(chart.ID)))
-	if err != nil {
-		return nil, errors.WrapError(err, "Could not generate Excel report")
-	}
-
-	return excelBytes, nil
+	return utils.GenerateExcelFromTemplate(chart.Data, template.Template, strconv.Itoa(int(chart.ID)))
 }
 
 // GeneratePDFReport generates a PDF report from chart data
@@ -207,34 +212,115 @@ func (s *ReportGenerationService) DownloadReport(reportID uint, userID uint, isA
 
 // triggerReportWebhooks sends webhook notifications for report events
 func (s *ReportGenerationService) triggerReportWebhooks(schedule *models.ReportSchedule, report *models.Report, err error) {
-	// Note: This method should be refactored to use dependency injection
-	// For now, we'll skip webhook triggering to avoid circular dependencies
-	// In a proper implementation, webhookService should be injected into ReportGenerationService
-
 	event := "report.generated"
+	if err != nil {
+		event = "report.failed"
+	}
+
+	// Get all webhooks for the user that are subscribed to report events
+	webhooks, err := s.webhookRepo.FindByUser(schedule.UserID, false)
+	if err != nil {
+		utils.Logger.Errorf("Failed to fetch webhooks for user %d: %v", schedule.UserID, err)
+		return
+	}
+
+	// Filter webhooks that are subscribed to this event type
+	var eventWebhooks []models.Webhook
+	for _, webhook := range webhooks {
+		if !webhook.Active {
+			continue
+		}
+
+		// Parse events from JSON string
+		var events []string
+		if err := json.Unmarshal([]byte(webhook.Events), &events); err != nil {
+			utils.Logger.Errorf("Failed to parse webhook events for webhook %d: %v", webhook.ID, err)
+			continue
+		}
+
+		// Check if webhook is subscribed to this event
+		for _, subscribedEvent := range events {
+			if subscribedEvent == event || subscribedEvent == "report.*" {
+				eventWebhooks = append(eventWebhooks, webhook)
+				break
+			}
+		}
+	}
+
+	// Prepare webhook payload
 	payload := map[string]interface{}{
-		"event": event,
-		"data": map[string]interface{}{
-			"report_id":     report.ID,
-			"report_name":   report.Name,
-			"schedule_id":   schedule.ID,
-			"schedule_name": schedule.Name,
-			"status":        report.Status,
-			"generated_at":  report.GeneratedAt,
-			"file_size":     len(report.Content),
-			"download_url":  fmt.Sprintf("/api/reports/%d/download", report.ID),
+		"event":     event,
+		"timestamp": time.Now().Unix(),
+		"report": map[string]interface{}{
+			"id":           report.ID,
+			"name":         report.Name,
+			"type":         report.Type,
+			"status":       report.Status,
+			"generated_at": report.GeneratedAt,
+			"error":        report.Error,
+		},
+		"schedule": map[string]interface{}{
+			"id":   schedule.ID,
+			"name": schedule.Name,
+			"type": schedule.Type,
 		},
 	}
 
-	if err != nil {
-		event = "report.failed"
-		payload["event"] = event
-		payload["data"].(map[string]interface{})["error"] = err.Error()
+	// Trigger webhooks asynchronously
+	for _, webhook := range eventWebhooks {
+		go s.triggerWebhook(webhook, payload, event)
 	}
 
-	// Trigger webhook asynchronously
-	// TODO: Implement proper webhook triggering with dependency injection
-	go func() {
-		utils.Logger.Infof("Webhook event %s triggered for report %d (status: %s)", event, report.ID, report.Status)
-	}()
+	utils.Logger.Infof("Triggered %d webhooks for event %s (report %d)", len(eventWebhooks), event, report.ID)
+}
+
+// triggerWebhook triggers a single webhook
+func (s *ReportGenerationService) triggerWebhook(webhook models.Webhook, payload interface{}, event string) {
+	// Create delivery record
+	delivery := &models.WebhookDelivery{
+		WebhookID: webhook.ID,
+		Event:     event,
+		Status:    "pending",
+		Attempts:  0,
+	}
+
+	// Marshal payload to JSON
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		utils.Logger.Errorf("Failed to marshal webhook payload: %v", err)
+		delivery.Status = "failed"
+		delivery.Response = "Failed to marshal payload"
+		s.webhookRepo.CreateDelivery(delivery)
+		return
+	}
+	delivery.Payload = string(payloadBytes)
+
+	// Create delivery record
+	if err := s.webhookRepo.CreateDelivery(delivery); err != nil {
+		utils.Logger.Errorf("Failed to create webhook delivery record: %v", err)
+		return
+	}
+
+	// Trigger webhook
+	err = s.webhookTrigger.TriggerWebhook(webhook.URL, payload)
+
+	// Update delivery record
+	now := time.Now()
+	delivery.SentAt = &now
+	delivery.Attempts++
+
+	if err != nil {
+		delivery.Status = "failed"
+		delivery.Response = err.Error()
+		utils.Logger.Errorf("Webhook delivery failed for webhook %d: %v", webhook.ID, err)
+	} else {
+		delivery.Status = "success"
+		delivery.Response = "Webhook delivered successfully"
+		utils.Logger.Infof("Webhook delivered successfully for webhook %d", webhook.ID)
+	}
+
+	// Update delivery record
+	if err := s.webhookRepo.UpdateDelivery(delivery); err != nil {
+		utils.Logger.Errorf("Failed to update webhook delivery record: %v", err)
+	}
 }

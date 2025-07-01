@@ -47,6 +47,9 @@ func NewHandler(db *gorm.DB) *Handler {
 	reportGeneratorService := infrastructure.NewReportGeneratorService()
 	webhookTriggerService := infrastructure.NewWebhookTriggerService()
 
+	// Create API key repository
+	apiKeyRepo := repositories.NewAPIKeyRepository(db)
+
 	// Create service factory
 	serviceFactory := services.NewServiceFactory(
 		db,
@@ -58,6 +61,7 @@ func NewHandler(db *gorm.DB) *Handler {
 		sqlExecutionService,
 		reportGeneratorService,
 		webhookTriggerService,
+		apiKeyRepo,
 	)
 
 	return &Handler{
@@ -822,13 +826,13 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 		c.Error(errors.NewBadRequestError("Invalid API key data", err))
 		return
 	}
-	apiKey, err := h.UserService.CreateAPIKey(userID.(uint), req.Name)
+	apiKey, plainKey, err := h.UserService.CreateAPIKey(userID.(uint), req.Name, req.ExpiresAt)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 	resp := gin.H{
-		"api_key":    "mock-api-key", // Only show once
+		"api_key":    plainKey, // Only show once
 		"prefix":     apiKey.Prefix,
 		"name":       apiKey.Name,
 		"expires_at": apiKey.ExpiresAt,
@@ -840,7 +844,9 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 // ListAPIKeys lists all API keys for the user (admin can list all)
 func (h *Handler) ListAPIKeys(c *gin.Context) {
 	userID, _ := c.Get("userID")
-	keys, err := h.UserService.ListAPIKeys(userID.(uint))
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
+	keys, err := h.UserService.ListAPIKeys(userID.(uint), isAdmin)
 	if err != nil {
 		c.Error(err)
 		return
@@ -851,13 +857,15 @@ func (h *Handler) ListAPIKeys(c *gin.Context) {
 // RevokeAPIKey revokes an API key by ID
 func (h *Handler) RevokeAPIKey(c *gin.Context) {
 	userID, _ := c.Get("userID")
+	role, _ := c.Get("role")
+	isAdmin := role.(string) == "admin"
 	id := c.Param("id")
 	keyID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
 		c.Error(errors.NewBadRequestError("Invalid API key ID", err))
 		return
 	}
-	if err := h.UserService.RevokeAPIKey(uint(keyID), userID.(uint)); err != nil {
+	if err := h.UserService.RevokeAPIKey(userID.(uint), uint(keyID), isAdmin); err != nil {
 		c.Error(err)
 		return
 	}

@@ -63,6 +63,7 @@ type APIKeyRepository interface {
 	FindByUser(userID uint, isAdmin bool) ([]models.APIKey, error)
 	Update(key *models.APIKey) error
 	Delete(id uint) error
+	Revoke(keyID uint, userID uint, isAdmin bool) error
 }
 
 // TemplateRepository defines the interface for template data access

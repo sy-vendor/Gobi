@@ -61,6 +61,8 @@ func main() {
 	reportGeneratorService := infrastructure.NewReportGeneratorService()
 	webhookTriggerService := infrastructure.NewWebhookTriggerService()
 
+	apiKeyRepo := repositories.NewAPIKeyRepository(db)
+
 	// Create service factory
 	serviceFactory := services.NewServiceFactory(
 		db,
@@ -72,6 +74,7 @@ func main() {
 		sqlExecutionService,
 		reportGeneratorService,
 		webhookTriggerService,
+		apiKeyRepo,
 	)
 
 	h := handlers.NewHandler(db)

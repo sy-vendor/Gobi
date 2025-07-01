@@ -19,6 +19,7 @@ type ServiceFactory struct {
 	sqlExecutionService SQLExecutionService
 	reportGenerator     ReportGeneratorService
 	webhookTrigger      WebhookTriggerService
+	apiKeyRepo          repositories.APIKeyRepository
 }
 
 // NewServiceFactory creates a new ServiceFactory instance
@@ -32,6 +33,7 @@ func NewServiceFactory(
 	sqlExec SQLExecutionService,
 	reportGen ReportGeneratorService,
 	webhookTrig WebhookTriggerService,
+	apiKeyRepo repositories.APIKeyRepository,
 ) *ServiceFactory {
 	return &ServiceFactory{
 		db:                  db,
@@ -43,6 +45,7 @@ func NewServiceFactory(
 		sqlExecutionService: sqlExec,
 		reportGenerator:     reportGen,
 		webhookTrigger:      webhookTrig,
+		apiKeyRepo:          apiKeyRepo,
 	}
 }
 
@@ -53,6 +56,7 @@ func (f *ServiceFactory) CreateUserService() *UserService {
 		userRepo,
 		f.cacheService,
 		f.authService,
+		f.apiKeyRepo,
 	)
 }
 
@@ -115,6 +119,16 @@ func (f *ServiceFactory) CreateWebhookService() *WebhookService {
 		webhookRepo,
 		f.webhookTrigger,
 		f.permissionService,
+	)
+}
+
+// CreateReportGenerationService creates a ReportGenerationService with all dependencies
+func (f *ServiceFactory) CreateReportGenerationService() *ReportGenerationService {
+	webhookRepo := repositories.NewWebhookRepository(f.db)
+	return NewReportGenerationService(
+		f.db,
+		webhookRepo,
+		f.webhookTrigger,
 	)
 }
 

@@ -22,7 +22,6 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 		}
 
 		if strings.HasPrefix(authHeader, "ApiKey ") {
-			// API Key authentication
 			plainKey := strings.TrimPrefix(authHeader, "ApiKey ")
 			if len(plainKey) < 12 {
 				c.Error(errors.NewError(http.StatusUnauthorized, "Invalid API key format", nil))
@@ -36,9 +35,8 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 				c.Abort()
 				return
 			}
-			// Set userID and role from API key owner
 			c.Set("userID", apiKey.UserID)
-			c.Set("role", "service") // or apiKey.User.Role if you want to inherit
+			c.Set("role", "service")
 			c.Next()
 			return
 		}

@@ -1,18 +1,24 @@
 package services
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+
 	"gobi/internal/models"
 	"gobi/internal/repositories"
 	"gobi/pkg/errors"
-	"time"
 )
 
 // UserService handles user-related business logic
 // 只依赖接口，便于 mock 和扩展
 type UserService struct {
-	repo  repositories.UserRepository
-	cache CacheService
-	auth  AuthService
+	repo       repositories.UserRepository
+	cache      CacheService
+	auth       AuthService
+	apiKeyRepo repositories.APIKeyRepository
 }
 
 // NewUserService creates a new UserService instance
@@ -20,11 +26,13 @@ func NewUserService(
 	repo repositories.UserRepository,
 	cache CacheService,
 	auth AuthService,
+	apiKeyRepo repositories.APIKeyRepository,
 ) *UserService {
 	return &UserService{
-		repo:  repo,
-		cache: cache,
-		auth:  auth,
+		repo:       repo,
+		cache:      cache,
+		auth:       auth,
+		apiKeyRepo: apiKeyRepo,
 	}
 }
 
@@ -145,37 +153,56 @@ func (s *UserService) ResetPassword(userID uint, newPassword string) error {
 	return nil
 }
 
+// CreateAPIKey creates a new API key for a user
+func (s *UserService) CreateAPIKey(userID uint, name string, expiresAt *time.Time) (*models.APIKey, string, error) {
+	// 生成安全的随机key
+	keyBytes := make([]byte, 32)
+	if _, err := rand.Read(keyBytes); err != nil {
+		return nil, "", errors.WrapError(err, "Failed to generate API key")
+	}
+	plainKey := base64.RawURLEncoding.EncodeToString(keyBytes)
+	prefix := plainKey[:12]
+	keyHash, err := bcrypt.GenerateFromPassword([]byte(plainKey), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, "", errors.WrapError(err, "Failed to hash API key")
+	}
+	apiKey := &models.APIKey{
+		UserID:    userID,
+		Name:      name,
+		KeyHash:   string(keyHash),
+		Prefix:    prefix,
+		CreatedAt: time.Now(),
+		ExpiresAt: expiresAt,
+		Revoked:   false,
+	}
+	if err := s.apiKeyRepo.Create(apiKey); err != nil {
+		return nil, "", errors.WrapError(err, "Could not create API key")
+	}
+	return apiKey, plainKey, nil
+}
+
+// ListAPIKeys lists all API keys for a user
+func (s *UserService) ListAPIKeys(userID uint, isAdmin bool) ([]models.APIKey, error) {
+	return s.apiKeyRepo.FindByUser(userID, isAdmin)
+}
+
+// RevokeAPIKey revokes an API key
+func (s *UserService) RevokeAPIKey(userID uint, keyID uint, isAdmin bool) error {
+	return s.apiKeyRepo.Revoke(keyID, userID, isAdmin)
+}
+
 // GetAPIKeyByPrefix retrieves an API key by its prefix
 func (s *UserService) GetAPIKeyByPrefix(prefix string) (*models.APIKey, error) {
-	// This would typically use an APIKeyRepository
-	// For now, return a mock implementation
-	return nil, errors.ErrNotFound
+	return s.apiKeyRepo.FindByPrefix(prefix)
 }
 
 // ValidateAPIKey validates an API key
 func (s *UserService) ValidateAPIKey(apiKey *models.APIKey, plainKey string) bool {
-	// This would typically validate the API key hash
-	// For now, return false
-	return false
-}
-
-// CreateAPIKey creates a new API key for a user
-func (s *UserService) CreateAPIKey(userID uint, name string) (*models.APIKey, error) {
-	// This would typically use an APIKeyRepository
-	// For now, return a mock implementation
-	return nil, errors.NewError(500, "API key creation not implemented", nil)
-}
-
-// ListAPIKeys lists all API keys for a user
-func (s *UserService) ListAPIKeys(userID uint) ([]models.APIKey, error) {
-	// This would typically use an APIKeyRepository
-	// For now, return a mock implementation
-	return nil, errors.NewError(500, "API key listing not implemented", nil)
-}
-
-// RevokeAPIKey revokes an API key
-func (s *UserService) RevokeAPIKey(userID uint, keyID uint) error {
-	// This would typically use an APIKeyRepository
-	// For now, return a mock implementation
-	return errors.NewError(500, "API key revocation not implemented", nil)
+	if apiKey == nil || apiKey.Revoked {
+		return false
+	}
+	if apiKey.ExpiresAt != nil && apiKey.ExpiresAt.Before(time.Now()) {
+		return false
+	}
+	return bcrypt.CompareHashAndPassword([]byte(apiKey.KeyHash), []byte(plainKey)) == nil
 }

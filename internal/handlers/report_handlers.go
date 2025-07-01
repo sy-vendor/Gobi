@@ -29,7 +29,7 @@ func NewReportHandler(db *gorm.DB, serviceFactory *services.ServiceFactory) *Rep
 		DB:                      db,
 		ReportService:           serviceFactory.CreateReportService(),
 		ReportScheduleService:   services.NewReportScheduleService(db),
-		ReportGenerationService: services.NewReportGenerationService(db),
+		ReportGenerationService: serviceFactory.CreateReportGenerationService(),
 	}
 }
 
