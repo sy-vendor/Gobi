@@ -21,6 +21,7 @@ require (
 	github.com/xuri/excelize/v2 v2.9.1
 	github.com/zsais/go-gin-prometheus v0.1.0
 	golang.org/x/crypto v0.38.0
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/driver/sqlite v1.5.4
@@ -81,5 +82,4 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

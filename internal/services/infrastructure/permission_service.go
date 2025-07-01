@@ -80,25 +80,25 @@ func (s *PermissionServiceImpl) canAccessDataSource(userID uint, datasourceID ui
 	return s.checkDataSourceOwnership(userID, datasourceID)
 }
 
-func (s *PermissionServiceImpl) checkQueryOwnership(userID uint, queryID uint) bool {
+func (s *PermissionServiceImpl) checkQueryOwnership(_ uint, _ uint) bool {
 	// This would need to be implemented with actual database queries
 	// For now, we'll return true as a placeholder
 	return true
 }
 
-func (s *PermissionServiceImpl) checkChartOwnership(userID uint, chartID uint) bool {
+func (s *PermissionServiceImpl) checkChartOwnership(_ uint, _ uint) bool {
 	// This would need to be implemented with actual database queries
 	// For now, we'll return true as a placeholder
 	return true
 }
 
-func (s *PermissionServiceImpl) checkReportOwnership(userID uint, reportID uint) bool {
+func (s *PermissionServiceImpl) checkReportOwnership(_ uint, _ uint) bool {
 	// This would need to be implemented with actual database queries
 	// For now, we'll return true as a placeholder
 	return true
 }
 
-func (s *PermissionServiceImpl) checkDataSourceOwnership(userID uint, datasourceID uint) bool {
+func (s *PermissionServiceImpl) checkDataSourceOwnership(_ uint, _ uint) bool {
 	// This would need to be implemented with actual database queries
 	// For now, we'll return true as a placeholder
 	return true

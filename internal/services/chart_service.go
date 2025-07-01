@@ -30,6 +30,12 @@ func NewChartService(
 // CreateChart creates a new chart
 func (s *ChartService) CreateChart(chart *models.Chart, userID uint) error {
 	chart.UserID = userID
+
+	// Validate chart type
+	if err := s.validateChartType(chart.Type); err != nil {
+		return err
+	}
+
 	if err := s.chartRepo.Create(chart); err != nil {
 		return errors.WrapError(err, "Could not create chart")
 	}
@@ -67,6 +73,10 @@ func (s *ChartService) UpdateChart(chartID uint, updates *models.Chart, userID u
 		return nil, errors.ErrForbidden
 	}
 	if updates.Type != "" {
+		// Validate chart type
+		if err := s.validateChartType(updates.Type); err != nil {
+			return nil, err
+		}
 		chart.Type = updates.Type
 	}
 	if updates.Name != "" {
