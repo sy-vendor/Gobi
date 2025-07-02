@@ -317,7 +317,18 @@ func (cs *CacheService) GetCacheHealth() map[string]interface{} {
 
 // Get retrieves a value from cache by key
 func (cs *CacheService) Get(key string) (interface{}, bool) {
-	return utils.GetQueryCache(key)
+	result, found := utils.GetQueryCache(key)
+	if !found {
+		return nil, false
+	}
+
+	// Handle CacheEntry type
+	if cacheEntry, ok := result.(*utils.CacheEntry); ok {
+		return cacheEntry.Data, true
+	}
+
+	// Return direct result for backward compatibility
+	return result, true
 }
 
 // Set sets a value in cache with a given TTL

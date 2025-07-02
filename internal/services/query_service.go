@@ -7,6 +7,7 @@ import (
 	"gobi/internal/models"
 	"gobi/internal/repositories"
 	"gobi/pkg/errors"
+	"gobi/pkg/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -179,11 +180,33 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	// Check cache first
 	cacheKey := "query_result_" + strconv.FormatUint(uint64(queryID), 10)
 	if result, found := s.cacheService.Get(cacheKey); found {
-		return &ExecuteQueryResult{
-			Data:          result.([]map[string]interface{}),
-			Source:        "cache",
-			ExecutionTime: "0ms",
-		}, nil
+		// Handle different cache result types
+		var data []map[string]interface{}
+
+		// Check if it's a CacheEntry
+		if cacheEntry, ok := result.(*utils.CacheEntry); ok {
+			// Extract data from CacheEntry
+			if entryData, ok := cacheEntry.Data.([]map[string]interface{}); ok {
+				data = entryData
+			} else {
+				// If data is not the expected type, treat as cache miss
+				found = false
+			}
+		} else if directData, ok := result.([]map[string]interface{}); ok {
+			// Direct data (backward compatibility)
+			data = directData
+		} else {
+			// Unknown type, treat as cache miss
+			found = false
+		}
+
+		if found && data != nil {
+			return &ExecuteQueryResult{
+				Data:          data,
+				Source:        "cache",
+				ExecutionTime: "0ms",
+			}, nil
+		}
 	}
 
 	// Get query
