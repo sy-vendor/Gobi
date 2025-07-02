@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"gobi/config"
 	"gobi/internal/models"
 	"gobi/internal/repositories"
 	"gobi/internal/services"
@@ -34,7 +35,7 @@ type Handler struct {
 // NewHandler creates a new Handler instance
 func NewHandler(db *gorm.DB) *Handler {
 	// Create infrastructure services
-	cacheService := infrastructure.NewCacheService()
+	cacheService := infrastructure.NewCacheService(&config.AppConfig)
 	validationService := infrastructure.NewValidationService()
 	encryptionService := infrastructure.NewEncryptionService()
 	authService := infrastructure.NewAuthService()
@@ -756,9 +757,9 @@ func (h *Handler) ClearCache(c *gin.Context) {
 
 	switch req.Type {
 	case "query":
-		utils.QueryCache.Flush()
+		utils.ClearCache()
 	case "all":
-		utils.QueryCache.Flush()
+		utils.ClearCache()
 		// Add other caches here if they exist
 	default:
 		c.Error(errors.NewBadRequestError("Unsupported cache type", nil))

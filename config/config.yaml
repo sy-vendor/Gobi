@@ -36,6 +36,17 @@ default:
       simple_query_ttl: 300   # 5 minutes for simple queries
       complex_query_ttl: 600  # 10 minutes for complex queries
       max_cache_size: 1000
+      hot_cache_enabled: true
+      hot_cache_ratio: 0.2    # 20% of items in hot cache
+      promotion_threshold: 3   # Access count to promote to hot cache
+      business_hours_start: 9
+      business_hours_end: 17
+      adaptive_ttl: true
+      cache_warmup: true
+      maintenance_interval: 300  # 5 minutes
+      eviction_policy: "lru"     # lru, lfu, fifo
+      compression_enabled: false
+      metrics_enabled: true
   webhook:
     timeout: 30
     max_retries: 3
@@ -79,6 +90,17 @@ dev:
       simple_query_ttl: 300   # 5 minutes for simple queries
       complex_query_ttl: 600  # 10 minutes for complex queries
       max_cache_size: 1000
+      hot_cache_enabled: true
+      hot_cache_ratio: 0.2    # 20% of items in hot cache
+      promotion_threshold: 3   # Access count to promote to hot cache
+      business_hours_start: 9
+      business_hours_end: 17
+      adaptive_ttl: true
+      cache_warmup: true
+      maintenance_interval: 300  # 5 minutes
+      eviction_policy: "lru"     # lru, lfu, fifo
+      compression_enabled: false
+      metrics_enabled: true
   webhook:
     timeout: 30
     max_retries: 3
@@ -123,6 +145,17 @@ prod:
       simple_query_ttl: 600   # 10 minutes for simple queries
       complex_query_ttl: 1800 # 30 minutes for complex queries
       max_cache_size: 5000
+      hot_cache_enabled: true
+      hot_cache_ratio: 0.15   # 15% of items in hot cache
+      promotion_threshold: 5   # Access count to promote to hot cache
+      business_hours_start: 9
+      business_hours_end: 17
+      adaptive_ttl: true
+      cache_warmup: true
+      maintenance_interval: 600  # 10 minutes
+      eviction_policy: "lru"     # lru, lfu, fifo
+      compression_enabled: true
+      metrics_enabled: true
   webhook:
     timeout: 30
     max_retries: 5
@@ -166,6 +199,17 @@ test:
       simple_query_ttl: 60    # 1 minute for simple queries
       complex_query_ttl: 120  # 2 minutes for complex queries
       max_cache_size: 100
+      hot_cache_enabled: false
+      hot_cache_ratio: 0.1    # 10% of items in hot cache
+      promotion_threshold: 2   # Access count to promote to hot cache
+      business_hours_start: 9
+      business_hours_end: 17
+      adaptive_ttl: false
+      cache_warmup: false
+      maintenance_interval: 60  # 1 minute
+      eviction_policy: "fifo"   # lru, lfu, fifo
+      compression_enabled: false
+      metrics_enabled: false
   webhook:
     timeout: 5
     max_retries: 1

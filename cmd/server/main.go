@@ -48,7 +48,7 @@ func main() {
 	defer utils.StopReportGenerator()
 
 	// Create infrastructure services
-	cacheService := infrastructure.NewCacheService()
+	cacheService := infrastructure.NewCacheService(&cfg)
 	validationService := infrastructure.NewValidationService()
 	encryptionService := infrastructure.NewEncryptionService()
 	authService := infrastructure.NewAuthService()
