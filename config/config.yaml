@@ -2,39 +2,76 @@ default:
   server:
     port: "8080"
     host: "0.0.0.0"
-    read_timeout: 30
-    write_timeout: 30
+    read_timeout: 30s
+    write_timeout: 30s
     max_header_bytes: 1048576
+    graceful_timeout: 30s
+    enable_https: false
+    cert_file: ""
+    key_file: ""
   jwt:
-    secret: "default_jwt_secret_change_in_production"
+    secret: "default_jwt_secret_change_in_production_must_be_at_least_32_chars_long"
     expiration_hours: 168  # 7天 = 24 * 7
     refresh_expiration_hours: 720  # 30天
+    issuer: "gobi"
+    audience: "gobi-users"
+    algorithm: "HS256"
   database:
     type: "sqlite"
     dsn: "gobi.db"
     max_open_conns: 25
     max_idle_conns: 5
-    conn_max_lifetime: 300
+    conn_max_lifetime: 300s
     connection_pool:
       max_open_conns: 25
       max_idle_conns: 5
-      conn_max_lifetime: 300
-      conn_max_idle_time: 60
+      conn_max_lifetime: 300s
+      conn_max_idle_time: 60s
+    ssl:
+      enabled: false
+      mode: "disable"
+      cert_file: ""
+      key_file: ""
+      ca_file: ""
+    retry:
+      max_retries: 3
+      retry_delay: 5s
+      backoff_type: "exponential"
+    migration:
+      auto_migrate: true
+      path: "./migrations"
+      table_name: "schema_migrations"
   security:
     bcrypt_cost: 12
     rate_limit: "100-M"  # 100 requests per minute
     cors_origins: ["http://localhost:3000", "http://localhost:5173"]
+    allowed_headers: ["Content-Type", "Authorization", "X-Requested-With"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    trusted_proxies: ["127.0.0.1", "::1"]
+    api_key_length: 32
+    password_policy:
+      min_length: 8
+      require_uppercase: true
+      require_lowercase: true
+      require_numbers: true
+      require_symbols: false
   logging:
     level: "info"
     format: "json"
     output: "stdout"
+    file_path: ""
+    max_size: 100
+    max_backups: 3
+    max_age: 28
+    compress: true
+    console: true
   cache:
     enabled: true
-    ttl: 300  # 5 minutes
+    ttl: 300s  # 5 minutes
     max_size: 1000
     strategy:
-      simple_query_ttl: 300   # 5 minutes for simple queries
-      complex_query_ttl: 600  # 10 minutes for complex queries
+      simple_query_ttl: 300s   # 5 minutes for simple queries
+      complex_query_ttl: 600s  # 10 minutes for complex queries
       max_cache_size: 1000
       hot_cache_enabled: true
       hot_cache_ratio: 0.2    # 20% of items in hot cache
@@ -43,52 +80,114 @@ default:
       business_hours_end: 17
       adaptive_ttl: true
       cache_warmup: true
-      maintenance_interval: 300  # 5 minutes
+      maintenance_interval: 300s  # 5 minutes
       eviction_policy: "lru"     # lru, lfu, fifo
       compression_enabled: false
       metrics_enabled: true
   webhook:
-    timeout: 30
+    timeout: 30s
     max_retries: 3
-    retry_delay: 5
+    retry_delay: 5s
+    max_payload: 1048576  # 1MB
+    verify_ssl: true
+    headers:
+      User-Agent: "Gobi-Webhook/1.0"
+  monitor:
+    enabled: true
+    metrics_port: "9090"
+    health_check: true
+    profiling: false
+    alerting:
+      enabled: false
+      channels: ["console"]
+      thresholds:
+        error_rate: 0.05
+        response_time: 1000
+        memory_usage: 0.8
+      cooldown: 300s
+  api:
+    version: "v1"
+    prefix: "/api"
+    default_limit: 20
+    max_limit: 100
+    enable_swagger: true
+    enable_metrics: true
+    enable_profiling: false
 
 dev:
   server:
     port: "8080"
     host: "0.0.0.0"
-    read_timeout: 30
-    write_timeout: 30
+    read_timeout: 30s
+    write_timeout: 30s
     max_header_bytes: 1048576
+    graceful_timeout: 30s
+    enable_https: false
+    cert_file: ""
+    key_file: ""
   jwt:
-    secret: "dev_jwt_secret_change_in_production"
+    secret: "dev_jwt_secret_change_in_production_must_be_at_least_32_chars_long"
     expiration_hours: 168  # 7天
     refresh_expiration_hours: 720  # 30天
+    issuer: "gobi-dev"
+    audience: "gobi-users"
+    algorithm: "HS256"
   database:
     type: "mysql"
     dsn: "user:password@tcp(127.0.0.1:3306)/gobi?charset=utf8mb4&parseTime=True&loc=Local"
     max_open_conns: 25
     max_idle_conns: 5
-    conn_max_lifetime: 300
+    conn_max_lifetime: 300s
     connection_pool:
       max_open_conns: 25
       max_idle_conns: 5
-      conn_max_lifetime: 300
-      conn_max_idle_time: 60
+      conn_max_lifetime: 300s
+      conn_max_idle_time: 60s
+    ssl:
+      enabled: false
+      mode: "disable"
+      cert_file: ""
+      key_file: ""
+      ca_file: ""
+    retry:
+      max_retries: 3
+      retry_delay: 5s
+      backoff_type: "exponential"
+    migration:
+      auto_migrate: true
+      path: "./migrations"
+      table_name: "schema_migrations"
   security:
     bcrypt_cost: 10
     rate_limit: "1000-M"  # 1000 requests per minute
     cors_origins: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"]
+    allowed_headers: ["Content-Type", "Authorization", "X-Requested-With"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    trusted_proxies: ["127.0.0.1", "::1"]
+    api_key_length: 32
+    password_policy:
+      min_length: 6
+      require_uppercase: false
+      require_lowercase: true
+      require_numbers: true
+      require_symbols: false
   logging:
     level: "debug"
     format: "text"
     output: "stdout"
+    file_path: ""
+    max_size: 100
+    max_backups: 3
+    max_age: 28
+    compress: true
+    console: true
   cache:
     enabled: true
-    ttl: 300  # 5 minutes
+    ttl: 300s  # 5 minutes
     max_size: 1000
     strategy:
-      simple_query_ttl: 300   # 5 minutes for simple queries
-      complex_query_ttl: 600  # 10 minutes for complex queries
+      simple_query_ttl: 300s   # 5 minutes for simple queries
+      complex_query_ttl: 600s  # 10 minutes for complex queries
       max_cache_size: 1000
       hot_cache_enabled: true
       hot_cache_ratio: 0.2    # 20% of items in hot cache
@@ -97,53 +196,114 @@ dev:
       business_hours_end: 17
       adaptive_ttl: true
       cache_warmup: true
-      maintenance_interval: 300  # 5 minutes
+      maintenance_interval: 300s  # 5 minutes
       eviction_policy: "lru"     # lru, lfu, fifo
       compression_enabled: false
       metrics_enabled: true
   webhook:
-    timeout: 30
+    timeout: 30s
     max_retries: 3
-    retry_delay: 5
+    retry_delay: 5s
+    max_payload: 1048576  # 1MB
+    verify_ssl: false
+    headers:
+      User-Agent: "Gobi-Webhook/1.0"
+  monitor:
+    enabled: true
+    metrics_port: "9090"
+    health_check: true
+    profiling: true
+    alerting:
+      enabled: false
+      channels: ["console"]
+      thresholds:
+        error_rate: 0.1
+        response_time: 2000
+        memory_usage: 0.9
+      cooldown: 300s
+  api:
+    version: "v1"
+    prefix: "/api"
+    default_limit: 20
+    max_limit: 100
+    enable_swagger: true
+    enable_metrics: true
+    enable_profiling: true
 
 prod:
   server:
     port: "8080"
     host: "0.0.0.0"
-    read_timeout: 30
-    write_timeout: 30
+    read_timeout: 30s
+    write_timeout: 30s
     max_header_bytes: 1048576
+    graceful_timeout: 30s
+    enable_https: false
+    cert_file: ""
+    key_file: ""
   jwt:
-    secret: "prod_jwt_secret_must_be_changed_in_production"
+    secret: "prod_jwt_secret_must_be_changed_in_production_at_least_32_chars"
     expiration_hours: 24  # 1天
     refresh_expiration_hours: 168  # 7天
+    issuer: "gobi-prod"
+    audience: "gobi-users"
+    algorithm: "HS256"
   database:
     type: "postgres"
     dsn: "host=localhost user=postgres password=pass dbname=gobi port=5432 sslmode=disable"
     max_open_conns: 100
     max_idle_conns: 10
-    conn_max_lifetime: 300
+    conn_max_lifetime: 300s
     connection_pool:
       max_open_conns: 100
       max_idle_conns: 10
-      conn_max_lifetime: 300
-      conn_max_idle_time: 120
+      conn_max_lifetime: 300s
+      conn_max_idle_time: 120s
+    ssl:
+      enabled: true
+      mode: "require"
+      cert_file: ""
+      key_file: ""
+      ca_file: ""
+    retry:
+      max_retries: 5
+      retry_delay: 10s
+      backoff_type: "exponential"
+    migration:
+      auto_migrate: false
+      path: "./migrations"
+      table_name: "schema_migrations"
   security:
     bcrypt_cost: 12
     rate_limit: "100-M"  # 100 requests per minute
     cors_origins: ["https://yourdomain.com", "https://app.yourdomain.com"]
+    allowed_headers: ["Content-Type", "Authorization", "X-Requested-With"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    trusted_proxies: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+    api_key_length: 32
+    password_policy:
+      min_length: 12
+      require_uppercase: true
+      require_lowercase: true
+      require_numbers: true
+      require_symbols: true
   logging:
     level: "warn"
     format: "json"
     output: "file"
     file_path: "/var/log/gobi/app.log"
+    max_size: 100
+    max_backups: 10
+    max_age: 90
+    compress: true
+    console: false
   cache:
     enabled: true
-    ttl: 600  # 10 minutes
+    ttl: 600s  # 10 minutes
     max_size: 5000
     strategy:
-      simple_query_ttl: 600   # 10 minutes for simple queries
-      complex_query_ttl: 1800 # 30 minutes for complex queries
+      simple_query_ttl: 600s   # 10 minutes for simple queries
+      complex_query_ttl: 1800s # 30 minutes for complex queries
       max_cache_size: 5000
       hot_cache_enabled: true
       hot_cache_ratio: 0.15   # 15% of items in hot cache
@@ -152,65 +312,152 @@ prod:
       business_hours_end: 17
       adaptive_ttl: true
       cache_warmup: true
-      maintenance_interval: 600  # 10 minutes
+      maintenance_interval: 600s  # 10 minutes
       eviction_policy: "lru"     # lru, lfu, fifo
       compression_enabled: true
       metrics_enabled: true
   webhook:
-    timeout: 30
+    timeout: 30s
     max_retries: 5
-    retry_delay: 10
+    retry_delay: 10s
+    max_payload: 1048576  # 1MB
+    verify_ssl: true
+    headers:
+      User-Agent: "Gobi-Webhook/1.0"
+  monitor:
+    enabled: true
+    metrics_port: "9090"
+    health_check: true
+    profiling: false
+    alerting:
+      enabled: true
+      channels: ["email", "slack"]
+      thresholds:
+        error_rate: 0.01
+        response_time: 500
+        memory_usage: 0.7
+      cooldown: 600s
+  api:
+    version: "v1"
+    prefix: "/api"
+    default_limit: 20
+    max_limit: 100
+    enable_swagger: false
+    enable_metrics: true
+    enable_profiling: false
 
 test:
   server:
     port: "8081"
     host: "localhost"
-    read_timeout: 10
-    write_timeout: 10
+    read_timeout: 10s
+    write_timeout: 10s
     max_header_bytes: 1048576
+    graceful_timeout: 10s
+    enable_https: false
+    cert_file: ""
+    key_file: ""
   jwt:
-    secret: "test_jwt_secret"
+    secret: "test_jwt_secret_must_be_at_least_32_chars_long"
     expiration_hours: 1
     refresh_expiration_hours: 24
+    issuer: "gobi-test"
+    audience: "gobi-users"
+    algorithm: "HS256"
   database:
     type: "sqlite"
     dsn: ":memory:"
     max_open_conns: 1
     max_idle_conns: 1
-    conn_max_lifetime: 60
+    conn_max_lifetime: 60s
     connection_pool:
       max_open_conns: 1
       max_idle_conns: 1
-      conn_max_lifetime: 60
-      conn_max_idle_time: 30
+      conn_max_lifetime: 60s
+      conn_max_idle_time: 30s
+    ssl:
+      enabled: false
+      mode: "disable"
+      cert_file: ""
+      key_file: ""
+      ca_file: ""
+    retry:
+      max_retries: 1
+      retry_delay: 1s
+      backoff_type: "linear"
+    migration:
+      auto_migrate: true
+      path: "./migrations"
+      table_name: "schema_migrations"
   security:
     bcrypt_cost: 4
     rate_limit: "1000-M"
     cors_origins: ["http://localhost:3000"]
+    allowed_headers: ["Content-Type", "Authorization"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE"]
+    trusted_proxies: ["127.0.0.1"]
+    api_key_length: 16
+    password_policy:
+      min_length: 4
+      require_uppercase: false
+      require_lowercase: false
+      require_numbers: false
+      require_symbols: false
   logging:
     level: "error"
     format: "text"
     output: "stdout"
+    file_path: ""
+    max_size: 10
+    max_backups: 1
+    max_age: 1
+    compress: false
+    console: true
   cache:
     enabled: false
-    ttl: 60
+    ttl: 60s
     max_size: 100
     strategy:
-      simple_query_ttl: 60    # 1 minute for simple queries
-      complex_query_ttl: 120  # 2 minutes for complex queries
+      simple_query_ttl: 60s    # 1 minute for simple queries
+      complex_query_ttl: 120s  # 2 minutes for complex queries
       max_cache_size: 100
       hot_cache_enabled: false
       hot_cache_ratio: 0.1    # 10% of items in hot cache
-      promotion_threshold: 2   # Access count to promote to hot cache
+      promotion_threshold: 1   # Access count to promote to hot cache
       business_hours_start: 9
       business_hours_end: 17
       adaptive_ttl: false
       cache_warmup: false
-      maintenance_interval: 60  # 1 minute
+      maintenance_interval: 60s  # 1 minute
       eviction_policy: "fifo"   # lru, lfu, fifo
       compression_enabled: false
       metrics_enabled: false
   webhook:
-    timeout: 5
+    timeout: 5s
     max_retries: 1
-    retry_delay: 1 
+    retry_delay: 1s
+    max_payload: 10240  # 10KB
+    verify_ssl: false
+    headers:
+      User-Agent: "Gobi-Webhook/1.0"
+  monitor:
+    enabled: false
+    metrics_port: "9091"
+    health_check: false
+    profiling: false
+    alerting:
+      enabled: false
+      channels: ["console"]
+      thresholds:
+        error_rate: 0.5
+        response_time: 5000
+        memory_usage: 0.95
+      cooldown: 60s
+  api:
+    version: "v1"
+    prefix: "/api"
+    default_limit: 10
+    max_limit: 50
+    enable_swagger: false
+    enable_metrics: false
+    enable_profiling: false 
