@@ -23,7 +23,7 @@ func SQLSecurityMiddleware() gin.HandlerFunc {
 		for _, values := range c.Request.URL.Query() {
 			for _, value := range values {
 				if containsSuspiciousSQLPattern(value) {
-					c.Error(errors.NewError(400, "Suspicious SQL pattern detected in request", nil))
+					c.Error(errors.NewError(errors.ErrCodeSQLInjection, "Suspicious SQL pattern detected in request", nil))
 					c.Abort()
 					return
 				}
@@ -34,7 +34,7 @@ func SQLSecurityMiddleware() gin.HandlerFunc {
 			for _, values := range c.Request.Form {
 				for _, value := range values {
 					if containsSuspiciousSQLPattern(value) {
-						c.Error(errors.NewError(400, "Suspicious SQL pattern detected in form data", nil))
+						c.Error(errors.NewError(errors.ErrCodeSQLInjection, "Suspicious SQL pattern detected in form data", nil))
 						c.Abort()
 						return
 					}
@@ -88,7 +88,7 @@ func ValidateSQLInBody() gin.HandlerFunc {
 			if sqlStr, exists := sqlData["sql"]; exists {
 				if sql, ok := sqlStr.(string); ok {
 					if containsSuspiciousSQLPattern(sql) {
-						c.Error(errors.NewError(400, "Suspicious SQL pattern detected in request", nil))
+						c.Error(errors.NewError(errors.ErrCodeSQLInjection, "Suspicious SQL pattern detected in request", nil))
 						c.Abort()
 						return
 					}

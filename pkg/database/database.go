@@ -23,7 +23,7 @@ func InitDB(cfg *config.Config) error {
 	case "postgres":
 		DB, err = gorm.Open(postgres.Open(cfg.Database.DSN), &gorm.Config{})
 	default:
-		return errors.NewError(400, "unsupported database type: "+cfg.Database.Type, nil)
+		return errors.NewError(errors.ErrCodeInvalidRequest, "unsupported database type: "+cfg.Database.Type, nil)
 	}
 	if err != nil {
 		return errors.WrapError(err, "Failed to open database connection")

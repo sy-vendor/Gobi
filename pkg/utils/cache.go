@@ -593,7 +593,7 @@ func ExecuteSQLWithTimeout(ds models.DataSource, sqlStr string, timeout time.Dur
 	case err := <-errChan:
 		return nil, err
 	case <-time.After(timeout):
-		return nil, errors.NewError(408, "Query execution timeout", nil)
+		return nil, errors.NewError(errors.ErrCodeTimeout, "Query execution timeout", nil)
 	}
 }
 

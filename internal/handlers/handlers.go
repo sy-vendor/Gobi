@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"gobi/config"
@@ -85,10 +86,16 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	}
 
 	if err := h.UserService.CreateUser(&user); err != nil {
+		// 记录错误用于监控
+		if customErr, ok := err.(*errors.CustomError); ok {
+			errors.RecordError(customErr)
+		}
 		c.Error(err)
 		return
 	}
 
+	// 记录成功操作
+	errors.RecordSuccess()
 	c.JSON(http.StatusCreated, user)
 }
 
@@ -105,10 +112,16 @@ func (h *Handler) Login(c *gin.Context) {
 
 	token, err := h.UserService.AuthenticateUser(req.Username, req.Password)
 	if err != nil {
+		// 记录认证错误
+		if customErr, ok := err.(*errors.CustomError); ok {
+			errors.RecordError(customErr)
+		}
 		c.Error(err)
 		return
 	}
 
+	// 记录成功登录
+	errors.RecordSuccess()
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
@@ -139,10 +152,16 @@ func (h *Handler) CreateDataSource(c *gin.Context) {
 
 	userID, _ := c.Get("userID")
 	if err := h.DataSourceService.CreateDataSource(&ds, userID.(uint)); err != nil {
+		// 记录数据源创建错误
+		if customErr, ok := err.(*errors.CustomError); ok {
+			errors.RecordError(customErr)
+		}
 		c.Error(err)
 		return
 	}
 
+	// 记录成功操作
+	errors.RecordSuccess()
 	c.JSON(http.StatusCreated, ds)
 }
 
@@ -292,13 +311,48 @@ func (h *Handler) ExecuteQuery(c *gin.Context) {
 	role, _ := c.Get("role")
 	isAdmin := role.(string) == "admin"
 
-	result, err := h.QueryService.ExecuteQuery(uint(queryID), userID.(uint), isAdmin)
+	// 使用重试机制执行查询
+	ctx := c.Request.Context()
+	err = errors.RetryWithContext(ctx, func(ctx context.Context) error {
+		var execErr error
+		result, execErr := h.QueryService.ExecuteQuery(uint(queryID), userID.(uint), isAdmin)
+		if execErr != nil {
+			return execErr
+		}
+		// 将结果存储到上下文中
+		c.Set("query_result", result)
+		return nil
+	}, errors.DefaultRetryConfig)
+
 	if err != nil {
+		// 记录查询执行错误
+		if customErr, ok := err.(*errors.CustomError); ok {
+			errors.RecordError(customErr)
+		}
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	// 从上下文中获取结果
+	if resultData, exists := c.Get("query_result"); exists {
+		// 记录成功操作
+		errors.RecordSuccess()
+		c.JSON(http.StatusOK, resultData)
+		return
+	}
+
+	// 如果没有重试，直接执行
+	resultData, err := h.QueryService.ExecuteQuery(uint(queryID), userID.(uint), isAdmin)
+	if err != nil {
+		if customErr, ok := err.(*errors.CustomError); ok {
+			errors.RecordError(customErr)
+		}
+		c.Error(err)
+		return
+	}
+
+	errors.RecordSuccess()
+	c.JSON(http.StatusOK, resultData)
 }
 
 func (h *Handler) UpdateQuery(c *gin.Context) {
@@ -885,5 +939,11 @@ func (h *Handler) SystemStats(c *gin.Context) {
 		"timestamp": time.Now().Unix(),
 	}
 
+	c.JSON(http.StatusOK, stats)
+}
+
+// ErrorStats 获取错误统计信息
+func (h *Handler) ErrorStats(c *gin.Context) {
+	stats := errors.GetErrorStats()
 	c.JSON(http.StatusOK, stats)
 }

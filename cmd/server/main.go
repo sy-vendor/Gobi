@@ -9,6 +9,7 @@ import (
 	"gobi/internal/services"
 	"gobi/internal/services/infrastructure"
 	"gobi/pkg/database"
+	"gobi/pkg/errors"
 	"gobi/pkg/utils"
 	"log"
 	"net/http"
@@ -26,11 +27,30 @@ import (
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
+// ConsoleAlertChannel 控制台告警通道
+type ConsoleAlertChannel struct{}
+
+func (c *ConsoleAlertChannel) SendAlert(alert *errors.Alert) error {
+	log.Printf("ALERT: [%s] %s - %s", alert.Severity, alert.Type, alert.Message)
+	if alert.Details != nil {
+		log.Printf("Details: %+v", alert.Details)
+	}
+	return nil
+}
+
 func main() {
 	_ = godotenv.Load()
 
 	config.LoadConfig()
 	cfg := config.AppConfig
+
+	// 初始化错误监控
+	errorMonitor := errors.GetGlobalMonitor()
+	defer errorMonitor.Stop()
+
+	// 添加控制台告警通道
+	consoleAlertChannel := &ConsoleAlertChannel{}
+	errorMonitor.AddAlertChannel(consoleAlertChannel)
 
 	if err := database.InitDB(&cfg); err != nil {
 		utils.Logger.Fatalf("Failed to initialize database: %v", err)
@@ -114,6 +134,7 @@ func main() {
 
 	r.Use(middleware.Recovery())
 	r.Use(middleware.ErrorHandler())
+	r.Use(middleware.ErrorLogger())
 	r.Use(middleware.SQLSecurityMiddleware())
 	r.Use(gin.Logger())
 
@@ -181,6 +202,7 @@ func main() {
 
 		// System monitoring
 		authorized.GET("/system/stats", h.SystemStats)
+		authorized.GET("/system/error-stats", h.ErrorStats)
 
 		// User management (admin only)
 		authorized.GET("/users", h.ListUsers)

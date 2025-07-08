@@ -3,7 +3,6 @@ package middleware
 import (
 	"gobi/config"
 	"gobi/pkg/errors"
-	"net/http"
 	"strings"
 
 	"gobi/internal/services"
@@ -16,7 +15,7 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.Error(errors.NewError(http.StatusUnauthorized, "Authorization header is required", nil))
+			c.Error(errors.NewError(errors.ErrCodeUnauthorized, "Authorization header is required", nil))
 			c.Abort()
 			return
 		}
@@ -24,14 +23,14 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 		if strings.HasPrefix(authHeader, "ApiKey ") {
 			plainKey := strings.TrimPrefix(authHeader, "ApiKey ")
 			if len(plainKey) < 12 {
-				c.Error(errors.NewError(http.StatusUnauthorized, "Invalid API key format", nil))
+				c.Error(errors.NewError(errors.ErrCodeInvalidAPIKey, "Invalid API key format", nil))
 				c.Abort()
 				return
 			}
 			prefix := plainKey[:12]
 			apiKey, err := userService.GetAPIKeyByPrefix(prefix)
 			if err != nil || !userService.ValidateAPIKey(apiKey, plainKey) {
-				c.Error(errors.NewError(http.StatusUnauthorized, "Invalid or expired API key", nil))
+				c.Error(errors.NewError(errors.ErrCodeInvalidAPIKey, "Invalid or expired API key", nil))
 				c.Abort()
 				return
 			}
@@ -44,7 +43,7 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 		// JWT authentication (default)
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.Error(errors.NewError(http.StatusUnauthorized, "Invalid authorization header format", nil))
+			c.Error(errors.NewError(errors.ErrCodeUnauthorized, "Invalid authorization header format", nil))
 			c.Abort()
 			return
 		}
@@ -54,7 +53,7 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 		})
 
 		if err != nil {
-			c.Error(errors.NewError(http.StatusUnauthorized, "Invalid token", err))
+			c.Error(errors.NewError(errors.ErrCodeInvalidToken, "Invalid token", err))
 			c.Abort()
 			return
 		}
@@ -67,7 +66,7 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			c.Error(errors.NewError(http.StatusUnauthorized, "Invalid token claims", nil))
+			c.Error(errors.NewError(errors.ErrCodeInvalidToken, "Invalid token claims", nil))
 			c.Abort()
 			return
 		}
@@ -90,14 +89,14 @@ func AuthMiddleware(cfg *config.Config, userService *services.UserService) gin.H
 		// 类型断言
 		userIDFloat, ok := userID.(float64)
 		if !ok {
-			c.Error(errors.NewError(http.StatusUnauthorized, "Invalid user_id type in token", nil))
+			c.Error(errors.NewError(errors.ErrCodeInvalidToken, "Invalid user_id type in token", nil))
 			c.Abort()
 			return
 		}
 
 		roleStr, ok := role.(string)
 		if !ok {
-			c.Error(errors.NewError(http.StatusUnauthorized, "Invalid role type in token", nil))
+			c.Error(errors.NewError(errors.ErrCodeInvalidToken, "Invalid role type in token", nil))
 			c.Abort()
 			return
 		}

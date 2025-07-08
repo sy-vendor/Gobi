@@ -31,15 +31,70 @@ func NewDataSourceService(
 // CreateDataSource creates a new data source with encrypted password
 func (s *DataSourceService) CreateDataSource(ds *models.DataSource, userID uint) error {
 	ds.UserID = userID
+
+	// 验证必填字段
+	if ds.Name == "" {
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeDataSourceNameRequired,
+			"DataSource name is required",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryValidation,
+		)
+	}
+	if ds.Type == "" {
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeDataSourceTypeRequired,
+			"DataSource type is required",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryValidation,
+		)
+	}
+	if ds.Host == "" {
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeDataSourceHostRequired,
+			"DataSource host is required",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryValidation,
+		)
+	}
+	if ds.Port == 0 {
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeDataSourcePortRequired,
+			"DataSource port is required",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryValidation,
+		)
+	}
+	if ds.Database == "" {
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeDataSourceDatabaseRequired,
+			"DataSource database is required",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryValidation,
+		)
+	}
+
 	if ds.Password != "" {
 		encryptedPassword, err := s.encryptionService.Encrypt(ds.Password)
 		if err != nil {
-			return errors.WrapError(err, "Failed to encrypt password")
+			return errors.NewErrorWithSeverity(
+				errors.ErrCodeInternalServer,
+				"Failed to encrypt password",
+				err,
+				errors.SeverityHigh,
+				errors.CategorySecurity,
+			)
 		}
 		ds.Password = encryptedPassword
 	}
+
 	if err := s.dsRepo.Create(ds); err != nil {
-		return errors.WrapError(err, "Could not create data source")
+		return errors.NewDatabaseError("Could not create data source", err)
 	}
 	return nil
 }
@@ -135,7 +190,13 @@ func (s *DataSourceService) TestConnection(ds *models.DataSource) error {
 	if ds.Password != "" {
 		decryptedPassword, err := utils.DecryptAES(ds.Password)
 		if err != nil {
-			return errors.WrapError(err, "Could not decrypt password")
+			return errors.NewErrorWithSeverity(
+				errors.ErrCodeInternalServer,
+				"Could not decrypt password",
+				err,
+				errors.SeverityHigh,
+				errors.CategorySecurity,
+			)
 		}
 		ds.Password = decryptedPassword
 	}
@@ -143,11 +204,23 @@ func (s *DataSourceService) TestConnection(ds *models.DataSource) error {
 	// Use the connection manager to test the connection
 	db, err := database.GetConnection(ds)
 	if err != nil {
-		return errors.WrapError(err, "Failed to create connection")
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeDataSourceConnection,
+			"Failed to create connection",
+			err,
+			errors.SeverityHigh,
+			errors.CategoryDatabase,
+		)
 	}
 
 	if err := db.Ping(); err != nil {
-		return errors.WrapError(err, "Database connection test failed")
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeDataSourceConnection,
+			"Database connection test failed",
+			err,
+			errors.SeverityHigh,
+			errors.CategoryDatabase,
+		)
 	}
 
 	return nil

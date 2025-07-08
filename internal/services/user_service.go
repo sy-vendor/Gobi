@@ -41,7 +41,13 @@ func (s *UserService) CreateUser(user *models.User) error {
 	// Hash password
 	hashedPassword, err := s.auth.HashPassword(user.Password)
 	if err != nil {
-		return errors.WrapError(err, "Failed to hash password")
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeInternalServer,
+			"Failed to hash password",
+			err,
+			errors.SeverityHigh,
+			errors.CategorySystem,
+		)
 	}
 	user.Password = hashedPassword
 	user.Role = "user" // Default role
@@ -49,17 +55,29 @@ func (s *UserService) CreateUser(user *models.User) error {
 	// Check if username already exists
 	existingUser, err := s.repo.FindByUsername(user.Username)
 	if err == nil && existingUser != nil {
-		return errors.NewConflictError("Username already exists", nil)
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeUserExists,
+			"Username already exists",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryBusiness,
+		)
 	}
 
 	// Check if email already exists
 	existingUser, err = s.repo.FindByEmail(user.Email)
 	if err == nil && existingUser != nil {
-		return errors.NewConflictError("Email already exists", nil)
+		return errors.NewErrorWithSeverity(
+			errors.ErrCodeUserExists,
+			"Email already exists",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryBusiness,
+		)
 	}
 
 	if err := s.repo.Create(user); err != nil {
-		return errors.WrapError(err, "Could not create user")
+		return errors.NewDatabaseError("Could not create user", err)
 	}
 
 	// Clear password before returning
@@ -71,19 +89,40 @@ func (s *UserService) CreateUser(user *models.User) error {
 func (s *UserService) AuthenticateUser(username, password string) (string, error) {
 	user, err := s.repo.FindByUsername(username)
 	if err != nil || user == nil {
-		return "", errors.ErrUnauthorized
+		return "", errors.NewErrorWithSeverity(
+			errors.ErrCodeInvalidCredentials,
+			"Invalid username or password",
+			err,
+			errors.SeverityMedium,
+			errors.CategoryAuth,
+		)
 	}
 	if err := s.auth.ComparePassword(user.Password, password); err != nil {
-		return "", errors.ErrUnauthorized
+		return "", errors.NewErrorWithSeverity(
+			errors.ErrCodeInvalidCredentials,
+			"Invalid username or password",
+			err,
+			errors.SeverityMedium,
+			errors.CategoryAuth,
+		)
 	}
 	// Generate JWT token
 	token, err := s.auth.GenerateJWT(user.ID, user.Role)
 	if err != nil {
-		return "", errors.WrapError(err, "Could not generate token")
+		return "", errors.NewErrorWithSeverity(
+			errors.ErrCodeInternalServer,
+			"Could not generate token",
+			err,
+			errors.SeverityHigh,
+			errors.CategorySystem,
+		)
 	}
 	// Update last login time
 	user.LastLogin = time.Now()
-	s.repo.Update(user)
+	if err := s.repo.Update(user); err != nil {
+		// 记录更新失败但不影响登录
+		errors.RecordError(errors.NewDatabaseError("Failed to update last login time", err))
+	}
 	return token, nil
 }
 

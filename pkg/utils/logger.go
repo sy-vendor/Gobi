@@ -20,3 +20,9 @@ func InitLogger() {
 		Logger.SetOutput(io.MultiWriter(os.Stdout, file))
 	}
 }
+
+// IsDevelopment 检查是否为开发环境
+func IsDevelopment() bool {
+	env := os.Getenv("GOBI_ENV")
+	return env == "" || env == "development" || env == "dev"
+}

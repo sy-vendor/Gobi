@@ -213,40 +213,98 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 	query, err := s.queryRepo.FindByID(queryID)
 	if err != nil {
 		if errs.Is(err, errors.ErrNotFound) {
-			return nil, errors.ErrNotFound
+			return nil, errors.NewErrorWithSeverity(
+				errors.ErrCodeNotFound,
+				"Query not found",
+				err,
+				errors.SeverityLow,
+				errors.CategoryBusiness,
+			)
 		}
-		return nil, errors.WrapError(err, "Could not fetch query")
+		return nil, errors.NewDatabaseError("Could not fetch query", err)
 	}
 
 	// Check permissions
 	if !isAdmin && query.UserID != userID && !query.IsPublic {
-		return nil, errors.ErrForbidden
+		return nil, errors.NewErrorWithSeverity(
+			errors.ErrCodeForbidden,
+			"Access denied to this query",
+			nil,
+			errors.SeverityMedium,
+			errors.CategoryAuthz,
+		)
 	}
 
 	// Validate SQL
 	if err := s.validationService.ValidateSQL(query.SQL); err != nil {
-		return nil, errors.WrapError(err, "Failed to execute query")
+		return nil, errors.NewErrorWithSeverity(
+			errors.ErrCodeInvalidSQL,
+			"Invalid SQL query",
+			err,
+			errors.SeverityMedium,
+			errors.CategoryValidation,
+		)
 	}
 
 	// Decrypt password if needed
 	if query.DataSource.Password != "" {
 		decryptedPassword, err := s.encryptionService.Decrypt(query.DataSource.Password)
 		if err != nil {
-			return nil, errors.WrapError(err, "Could not decrypt password")
+			return nil, errors.NewErrorWithSeverity(
+				errors.ErrCodeInternalServer,
+				"Could not decrypt password",
+				err,
+				errors.SeverityHigh,
+				errors.CategorySecurity,
+			)
 		}
 		query.DataSource.Password = decryptedPassword
 	}
 
-	// Execute query
+	// Execute query with retry mechanism
 	startTime := time.Now()
-	results, err := s.sqlExecutionService.ExecuteSQL(query.DataSource, query.SQL)
+	var results []map[string]interface{}
+
+	// 使用重试机制执行SQL查询
+	err = errors.Retry(func() error {
+		var execErr error
+		results, execErr = s.sqlExecutionService.ExecuteSQL(query.DataSource, query.SQL)
+		if execErr != nil {
+			// 记录重试
+			errors.RecordRetry()
+			return execErr
+		}
+		return nil
+	}, errors.RetryConfig{
+		MaxAttempts:   3,
+		InitialDelay:  1 * time.Second,
+		MaxDelay:      10 * time.Second,
+		BackoffFactor: 2.0,
+		Jitter:        true,
+		RetryableErrors: []errors.ErrorCode{
+			errors.ErrCodeDatabaseConnection,
+			errors.ErrCodeDatabaseTimeout,
+			errors.ErrCodeQueryTimeout,
+		},
+	})
+
 	if err != nil {
-		return nil, errors.WrapError(err, "Failed to execute query")
+		return nil, errors.NewErrorWithSeverity(
+			errors.ErrCodeDatabaseQuery,
+			"Failed to execute query",
+			err,
+			errors.SeverityHigh,
+			errors.CategoryDatabase,
+		)
 	}
+
 	executionTime := time.Since(startTime)
 
 	// Update execution count
-	s.queryRepo.IncrementExecCount(queryID)
+	if err := s.queryRepo.IncrementExecCount(queryID); err != nil {
+		// 记录更新失败但不影响查询结果
+		errors.RecordError(errors.NewDatabaseError("Failed to increment execution count", err))
+	}
 
 	// Cache results
 	var ttl time.Duration

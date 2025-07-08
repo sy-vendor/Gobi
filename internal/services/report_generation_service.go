@@ -114,7 +114,7 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 			report.Status = "failed"
 			report.Error = "Invalid queries configuration"
 			s.db.Save(&report)
-			s.triggerReportWebhooks(schedule, &report, errors.NewError(400, "Invalid queries configuration", err))
+			s.triggerReportWebhooks(schedule, &report, errors.NewError(errors.ErrCodeInvalidRequest, "Invalid queries configuration", err))
 			return errors.WrapError(err, "Invalid queries configuration")
 		}
 	}
@@ -124,7 +124,7 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 			report.Status = "failed"
 			report.Error = "Invalid charts configuration"
 			s.db.Save(&report)
-			s.triggerReportWebhooks(schedule, &report, errors.NewError(400, "Invalid charts configuration", err))
+			s.triggerReportWebhooks(schedule, &report, errors.NewError(errors.ErrCodeInvalidRequest, "Invalid charts configuration", err))
 			return errors.WrapError(err, "Invalid charts configuration")
 		}
 	}
@@ -134,7 +134,7 @@ func (s *ReportGenerationService) GenerateScheduledReport(schedule *models.Repor
 			report.Status = "failed"
 			report.Error = "Invalid templates configuration"
 			s.db.Save(&report)
-			s.triggerReportWebhooks(schedule, &report, errors.NewError(400, "Invalid templates configuration", err))
+			s.triggerReportWebhooks(schedule, &report, errors.NewError(errors.ErrCodeInvalidRequest, "Invalid templates configuration", err))
 			return errors.WrapError(err, "Invalid templates configuration")
 		}
 	}
