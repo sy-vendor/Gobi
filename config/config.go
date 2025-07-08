@@ -257,10 +257,13 @@ func (cm *ConfigManager) load() error {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
+	// 根据环境获取对应的配置节
+	cm.viper.SetConfigName("config")
+
 	// 解析配置
 	config := &Config{}
-	if err := cm.viper.Unmarshal(config); err != nil {
-		return fmt.Errorf("failed to unmarshal config: %w", err)
+	if err := cm.viper.UnmarshalKey(cm.env, config); err != nil {
+		return fmt.Errorf("failed to unmarshal config for env %s: %w", cm.env, err)
 	}
 
 	// 设置默认值
