@@ -36,7 +36,7 @@ type Handler struct {
 // NewHandler creates a new Handler instance
 func NewHandler(db *gorm.DB) *Handler {
 	// Create infrastructure services
-	cacheService := infrastructure.NewCacheService(&config.AppConfig)
+	cacheService := infrastructure.NewCacheService(config.AppConfig)
 	validationService := infrastructure.NewValidationService()
 	encryptionService := infrastructure.NewEncryptionService()
 	authService := infrastructure.NewAuthService()

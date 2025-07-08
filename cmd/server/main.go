@@ -41,8 +41,11 @@ func (c *ConsoleAlertChannel) SendAlert(alert *errors.Alert) error {
 func main() {
 	_ = godotenv.Load()
 
-	config.LoadConfig()
-	cfg := config.AppConfig
+	// 加载配置
+	if err := config.LoadConfig(); err != nil {
+		log.Fatal("Failed to load config:", err)
+	}
+	cfg := config.GetConfig()
 
 	// 初始化错误监控
 	errorMonitor := errors.GetGlobalMonitor()
@@ -52,23 +55,23 @@ func main() {
 	consoleAlertChannel := &ConsoleAlertChannel{}
 	errorMonitor.AddAlertChannel(consoleAlertChannel)
 
-	if err := database.InitDB(&cfg); err != nil {
+	if err := database.InitDB(cfg); err != nil {
 		utils.Logger.Fatalf("Failed to initialize database: %v", err)
 	}
 	db := database.GetDB()
 
 	// 初始化连接管理器
-	database.InitConnectionManager(&cfg)
+	database.InitConnectionManager(cfg)
 
 	defer database.CloseAllConnections()
 
 	// 初始化智能缓存
-	utils.InitQueryCache(&cfg)
+	utils.InitQueryCache(cfg)
 	utils.InitReportGenerator()
 	defer utils.StopReportGenerator()
 
 	// Create infrastructure services
-	cacheService := infrastructure.NewCacheService(&cfg)
+	cacheService := infrastructure.NewCacheService(cfg)
 	validationService := infrastructure.NewValidationService()
 	encryptionService := infrastructure.NewEncryptionService()
 	authService := infrastructure.NewAuthService()
@@ -144,7 +147,7 @@ func main() {
 
 	// Protected routes
 	authorized := r.Group("/api")
-	authorized.Use(middleware.AuthMiddleware(&cfg, h.UserService))
+	authorized.Use(middleware.AuthMiddleware(cfg, h.UserService))
 	{
 		// User routes
 		authorized.GET("/me", h.GetMe)
