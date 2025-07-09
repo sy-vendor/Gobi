@@ -134,6 +134,15 @@ docker-compose up -d
 - **优化的 SQL 验证** 消除重复检查
 - **系统监控** 带性能指标
 - **查询执行跟踪** 和分析
+- **数据库查询优化引擎**: 高级查询分析和优化
+  - **查询复杂度分析**: 自动分析 SQL 复杂度和性能影响
+  - **索引管理**: 多数据库索引分析和优化建议
+  - **查询执行计划**: 详细的执行计划和性能指标
+  - **智能缓存策略**: 基于查询特征、业务时间和数据变化的动态 TTL
+  - **批量查询执行**: 并发查询执行，控制并发数量（最多5个并发查询）
+  - **性能监控**: 实时查询性能跟踪、慢查询检测和内存使用优化
+  - **内存使用优化**: 大结果集的智能内存管理，带大小估算
+  - **网络传输优化**: 优化的数据传输，带压缩和大小估算
 
 ### 📈 **数据管理**
 - **多数据库支持** (SQLite、MySQL、PostgreSQL)
@@ -183,6 +192,29 @@ POST /webhooks/reports
 }
 ```
 
+### **数据库查询优化**
+```go
+// 分析查询性能并获取优化建议
+optimizer := database.NewQueryOptimizer()
+plan, err := optimizer.AnalyzeQuery(sql, dataSource)
+for _, suggestion := range plan.Suggestions {
+    fmt.Println("优化建议:", suggestion)
+}
+
+// 使用优化执行查询
+optimizedService := infrastructure.NewOptimizedSQLExecutionService(cacheService)
+result, err := optimizedService.ExecuteWithOptimization(ctx, dataSource, sql)
+fmt.Printf("执行时间: %v, 缓存命中: %v\n", 
+    result.ExecutionTime, result.CacheHit)
+
+// 获取索引建议
+indexManager := database.NewIndexManager()
+suggestions, err := indexManager.SuggestIndexes(queryPatterns, dataSource)
+for _, suggestion := range suggestions {
+    fmt.Printf("索引建议: %s\n", suggestion.SQL)
+}
+```
+
 ---
 
 ## 🛠️ 技术栈
@@ -196,6 +228,8 @@ POST /webhooks/reports
 - **架构**: 清洁架构与 Repository 模式
 - **缓存**: 智能缓存与 go-cache
 - **文档**: 支持 OpenAPI/Swagger
+- **数据库优化**: 高级查询优化与索引管理
+- **性能监控**: 实时指标与查询分析
 
 ## 🏗️ 架构概览
 
@@ -212,6 +246,13 @@ POST /webhooks/reports
 │ (缓存、认证、   │    │ (SQL、图表、    │    │     池          │
 │  加密)          │    │  数据源)        │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ 查询优化器      │    │   索引管理器    │    │   性能监控      │
+│ (分析、建议)    │    │ (多数据库支持)  │    │ (指标、分析)    │
+│                 │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ---
@@ -223,6 +264,15 @@ POST /webhooks/reports
 - **智能缓存**: 基于查询复杂度的智能 TTL (简单: 5分钟, 复杂: 30分钟)
 - **连接池配置**: 可配置的数据库连接池设置
 - **系统监控**: 实时性能指标和健康检查
+- **数据库查询优化引擎**: 高级查询分析和优化
+  - **查询复杂度分析**: 自动分析 SQL 复杂度，带评分系统
+  - **索引管理**: 多数据库 (MySQL, PostgreSQL, SQLite) 索引分析和建议
+  - **查询执行计划**: 详细的执行计划，带性能指标和优化建议
+  - **智能缓存策略**: 基于查询特征、业务时间和数据变化的动态 TTL
+  - **批量查询执行**: 并发查询执行，控制并发数量（最多5个并发查询）
+  - **性能监控**: 实时查询性能跟踪、慢查询检测和内存使用优化
+  - **内存使用优化**: 大结果集的智能内存管理，带大小估算
+  - **网络传输优化**: 优化的数据传输，带压缩和大小估算
 
 ### 🏗️ **架构重构**
 - **Repository 模式**: 数据访问逻辑的清晰分离
