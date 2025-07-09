@@ -174,11 +174,18 @@ func (m *ErrorMonitor) GetStats() *ErrorStats {
 		}
 	}
 
-	// 创建副本
-	stats := *m.stats
-	stats.ErrorCounts = make(map[ErrorCode]int64)
-	stats.SeverityCounts = make(map[ErrorSeverity]int64)
-	stats.CategoryCounts = make(map[ErrorCategory]int64)
+	// 手动拷贝字段，避免拷贝锁
+	stats := &ErrorStats{
+		TotalErrors:    m.stats.TotalErrors,
+		ErrorCounts:    make(map[ErrorCode]int64),
+		SeverityCounts: make(map[ErrorSeverity]int64),
+		CategoryCounts: make(map[ErrorCategory]int64),
+		RecentErrors:   append([]*ErrorRecord(nil), m.stats.RecentErrors...),
+		LastErrorTime:  m.stats.LastErrorTime,
+		ErrorRate:      m.stats.ErrorRate,
+		RetryCount:     m.stats.RetryCount,
+		SuccessCount:   m.stats.SuccessCount,
+	}
 
 	for k, v := range m.stats.ErrorCounts {
 		stats.ErrorCounts[k] = v
@@ -190,7 +197,7 @@ func (m *ErrorMonitor) GetStats() *ErrorStats {
 		stats.CategoryCounts[k] = v
 	}
 
-	return &stats
+	return stats
 }
 
 // AddAlertChannel 添加告警通道
