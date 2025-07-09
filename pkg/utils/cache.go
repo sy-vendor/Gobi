@@ -614,3 +614,18 @@ func containsLimit(sql string) bool {
 func addLimitClause(sql string, limit int) string {
 	return fmt.Sprintf("%s LIMIT %d", sql, limit)
 }
+
+// ContainsAny checks if string contains any of the given substrings
+func ContainsAny(s string, substrings []string) bool {
+	for _, substr := range substrings {
+		if strings.Contains(s, substr) {
+			return true
+		}
+	}
+	return false
+}
+
+// Contains checks if string contains substring
+func Contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}

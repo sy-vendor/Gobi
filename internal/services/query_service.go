@@ -1,11 +1,13 @@
 package services
 
 import (
+	"context"
 	errs "errors"
 	"fmt"
 	"gobi/config"
 	"gobi/internal/models"
 	"gobi/internal/repositories"
+	"gobi/internal/services/infrastructure"
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
 	"strconv"
@@ -175,7 +177,7 @@ func isSimpleQuery(sql string) bool {
 	return true
 }
 
-// ExecuteQuery executes a query and returns the results
+// ExecuteQuery executes a query and returns the results with optimization
 func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*ExecuteQueryResult, error) {
 	// Check cache first
 	cacheKey := "query_result_" + strconv.FormatUint(uint64(queryID), 10)
@@ -261,19 +263,39 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 		query.DataSource.Password = decryptedPassword
 	}
 
-	// Execute query with retry mechanism
+	// Execute query with optimization and retry mechanism
 	startTime := time.Now()
 	var results []map[string]interface{}
+	var executionTime time.Duration
 
 	// 使用重试机制执行SQL查询
 	err = errors.Retry(func() error {
 		var execErr error
-		results, execErr = s.sqlExecutionService.ExecuteSQL(query.DataSource, query.SQL)
-		if execErr != nil {
-			// 记录重试
-			errors.RecordRetry()
-			return execErr
+		var execTime time.Duration
+
+		// Use optimized execution if available
+		if optimizedService, ok := s.sqlExecutionService.(*infrastructure.OptimizedSQLExecutionService); ok {
+			ctx := context.Background()
+			execResult, execErr := optimizedService.ExecuteWithOptimization(ctx, query.DataSource, query.SQL)
+			if execErr != nil {
+				// 记录重试
+				errors.RecordRetry()
+				return execErr
+			}
+			results = execResult.Data
+			execTime = execResult.ExecutionTime
+		} else {
+			// Fallback to standard execution
+			results, execErr = s.sqlExecutionService.ExecuteSQL(query.DataSource, query.SQL)
+			if execErr != nil {
+				// 记录重试
+				errors.RecordRetry()
+				return execErr
+			}
+			execTime = time.Since(startTime)
 		}
+
+		executionTime = execTime
 		return nil
 	}, errors.RetryConfig{
 		MaxAttempts:   3,
@@ -298,15 +320,13 @@ func (s *QueryService) ExecuteQuery(queryID uint, userID uint, isAdmin bool) (*E
 		)
 	}
 
-	executionTime := time.Since(startTime)
-
 	// Update execution count
 	if err := s.queryRepo.IncrementExecCount(queryID); err != nil {
 		// 记录更新失败但不影响查询结果
 		errors.RecordError(errors.NewDatabaseError("Failed to increment execution count", err))
 	}
 
-	// Cache results
+	// Cache results with optimized TTL
 	var ttl time.Duration
 	if isSimpleQuery(query.SQL) {
 		ttl = time.Duration(config.AppConfig.Cache.Strategy.SimpleQueryTTL) * time.Second
