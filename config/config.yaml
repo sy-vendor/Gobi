@@ -113,6 +113,8 @@ default:
     enable_swagger: true
     enable_metrics: true
     enable_profiling: false
+  ai:
+    deepseek_api_key: "sk-f7eda1ddb28948f6951cb08c16049828"
 
 dev:
   server:
@@ -229,6 +231,8 @@ dev:
     enable_swagger: true
     enable_metrics: true
     enable_profiling: true
+  ai:
+    deepseek_api_key: ""
 
 prod:
   server:

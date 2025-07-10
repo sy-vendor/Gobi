@@ -719,3 +719,49 @@ All API errors are returned in JSON format:
 ## 📦 Docker Deployment
 
 _Coming soon..._
+
+## 🤖 AI Capabilities (DeepSeek Integration)
+
+Gobi now supports advanced AI-powered BI features via DeepSeek LLM integration:
+
+- Natural Language to SQL (NL2SQL)
+- Smart Data Insights & Analysis
+- Automated Report Generation
+
+### Configuration
+
+1. Register and obtain your DeepSeek API Key
+2. Set the environment variable:
+   ```bash
+   export DEEPSEEK_API_KEY=your_key
+   ```
+
+### API Usage Examples
+
+#### 1. Natural Language to SQL
+```http
+POST /api/ai/nl2sql
+{
+  "question": "What is the sales growth this month compared to last year?",
+  "schema": "Table schema description..."
+}
+```
+
+#### 2. Smart Insights
+```http
+POST /api/ai/insight
+{
+  "table": "sales",
+  "metrics": "revenue,growth",
+  "summary": "Sales data from Jan to Jun 2024..."
+}
+```
+
+#### 3. Automated Report Generation
+```http
+POST /api/ai/reportgen
+{
+  "requirement": "Need a sales trend analysis report",
+  "schema": "Table schema description..."
+}
+```

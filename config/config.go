@@ -25,6 +25,7 @@ type Config struct {
 	Webhook  WebhookConfig  `mapstructure:"webhook"`
 	Monitor  MonitorConfig  `mapstructure:"monitor"`
 	API      APIConfig      `mapstructure:"api"`
+	AI       AIConfig       `mapstructure:"ai"`
 }
 
 // ServerConfig 服务器配置
@@ -192,6 +193,10 @@ type APIConfig struct {
 	EnableProfiling bool   `mapstructure:"enable_profiling"`
 }
 
+type AIConfig struct {
+	DeepSeekAPIKey string `mapstructure:"deepseek_api_key"`
+}
+
 // ConfigManager 配置管理器
 type ConfigManager struct {
 	config     *Config
@@ -282,6 +287,11 @@ func (cm *ConfigManager) load() error {
 	cm.config = config
 	AppConfig = config
 	cm.mutex.Unlock()
+
+	// 自动设置AI Key到环境变量
+	if config.AI.DeepSeekAPIKey != "" {
+		os.Setenv("DEEPSEEK_API_KEY", config.AI.DeepSeekAPIKey)
+	}
 
 	// 启动文件监听
 	go cm.watchConfigFile()

@@ -234,6 +234,13 @@ func main() {
 		authorized.GET("/reports/:id/download", reportHandler.DownloadReport)
 	}
 
+	// AI能力相关API
+	r.POST("/api/ai/nl2sql", handlers.NL2SQLHandler)
+	r.POST("/api/ai/insight", handlers.InsightHandler)
+	r.POST("/api/ai/reportgen", handlers.ReportGenHandler)
+	// 新增 ECharts option 生成接口
+	r.POST("/api/ai/nl2chart", handlers.NL2ChartHandler)
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
 		Handler: r,
