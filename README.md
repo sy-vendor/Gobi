@@ -1,8 +1,8 @@
-# Gobi - Modern Go-Native Business Intelligence Engine
+# Gobi - Modern Go-Native Business Intelligence (BI) Engine
 
 [简体中文](./README.zh-CN.md)
 
-🚀 **A lightweight, API-first Business Intelligence engine built with Go** - designed for modern applications that need embedded analytics, automated reporting, and real-time data visualization.
+🚀 **A lightweight, API-first Business Intelligence (BI) engine built with Go** - designed for modern applications that need embedded analytics, automated reporting, and real-time data visualization. The ultimate Go-native BI solution for developers.
 
 ## ✨ Why Gobi?
 
@@ -16,11 +16,12 @@
 
 ## 🎯 Perfect For
 
-- **SaaS Applications** needing embedded analytics
-- **Microservices** requiring lightweight BI capabilities
-- **Internal Tools** for data visualization and reporting
-- **API-First Platforms** that need headless BI functionality
+- **SaaS Applications** needing embedded BI and analytics
+- **Microservices** requiring lightweight Business Intelligence capabilities
+- **Internal Tools** for data visualization and BI reporting
+- **API-First Platforms** that need headless Business Intelligence functionality
 - **Go Applications** looking for native BI integration
+- **Business Intelligence** teams requiring modern, scalable BI solutions
 
 [![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -29,6 +30,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/stargazers)
 [![API-First](https://img.shields.io/badge/API--First-Design-blueviolet)](https://github.com/sy-vendor/gobi)
 [![3D Charts](https://img.shields.io/badge/3D--Charts-Supported-orange)](https://github.com/sy-vendor/gobi)
+[![Business Intelligence](https://img.shields.io/badge/Business--Intelligence-Engine-green.svg)](https://github.com/sy-vendor/gobi)
 [![Clean Architecture](https://img.shields.io/badge/Clean--Architecture-Implemented-green)](https://github.com/sy-vendor/gobi)
 
 ---

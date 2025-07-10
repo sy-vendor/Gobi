@@ -1,8 +1,8 @@
-# Gobi - 现代 Go 原生商业智能引擎
+# Gobi - 现代 Go 原生商业智能 (BI) 引擎
 
 [English](./README.md)
 
-🚀 **一个轻量级、API优先的商业智能引擎，使用 Go 构建** - 专为需要嵌入式分析、自动化报告和实时数据可视化的现代应用程序而设计。
+🚀 **一个轻量级、API优先的商业智能 (BI) 引擎，使用 Go 构建** - 专为需要嵌入式分析、自动化报告和实时数据可视化的现代应用程序而设计。开发者的终极 Go 原生 BI 解决方案。
 
 ## ✨ 为什么选择 Gobi？
 
@@ -16,11 +16,12 @@
 
 ## 🎯 完美适用于
 
-- **SaaS 应用程序** 需要嵌入式分析功能
-- **微服务** 需要轻量级 BI 能力
-- **内部工具** 用于数据可视化和报告
-- **API 优先平台** 需要无头 BI 功能
+- **SaaS 应用程序** 需要嵌入式 BI 和分析功能
+- **微服务** 需要轻量级商业智能能力
+- **内部工具** 用于数据可视化和 BI 报告
+- **API 优先平台** 需要无头商业智能功能
 - **Go 应用程序** 寻找原生 BI 集成
+- **商业智能团队** 需要现代、可扩展的 BI 解决方案
 
 [![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -29,6 +30,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/sy-vendor/gobi)](https://github.com/sy-vendor/gobi/stargazers)
 [![API-First](https://img.shields.io/badge/API--First-Design-blueviolet)](https://github.com/sy-vendor/gobi)
 [![3D Charts](https://img.shields.io/badge/3D--Charts-Supported-orange)](https://github.com/sy-vendor/gobi)
+[![Business Intelligence](https://img.shields.io/badge/Business--Intelligence-Engine-green.svg)](https://github.com/sy-vendor/gobi)
 [![Clean Architecture](https://img.shields.io/badge/Clean--Architecture-Implemented-green)](https://github.com/sy-vendor/gobi)
 
 ---
@@ -230,6 +232,7 @@ for _, suggestion := range suggestions {
 - **文档**: 支持 OpenAPI/Swagger
 - **数据库优化**: 高级查询优化与索引管理
 - **性能监控**: 实时指标与查询分析
+- **商业智能**: 完整的 BI 引擎，支持 25+ 图表类型
 
 ## 🏗️ 架构概览
 
@@ -702,4 +705,95 @@ def verify_signature(payload, signature, timestamp, secret):
 - **API Key 使用 bcrypt 哈希**
 - 用户数据隔离
 - **安全的随机密钥生成**
-- **自动 Webhook 重试，指数退避** 
+- **自动 Webhook 重试，指数退避**
+- **商业智能数据安全**: 企业级 BI 数据保护 
+
+## 🎯 商业智能 (BI) 特性
+
+### 📊 **完整的 BI 解决方案**
+Gobi 不仅仅是一个图表库，而是一个完整的**商业智能引擎**，专为现代应用程序设计：
+
+- **API 优先的 BI 架构**: 无缝集成到任何应用程序
+- **25+ 图表类型**: 从基础图表到高级 3D 可视化
+- **实时数据更新**: 支持实时 BI 仪表盘
+- **自动化报告**: 基于 Cron 的 BI 报告调度
+- **多用户 BI 环境**: 企业级用户隔离和权限管理
+
+### 🔄 **BI 工作流程**
+1. **数据源连接**: 支持多种数据库的 BI 数据源
+2. **查询构建**: 可视化的 BI 查询编辑器
+3. **图表创建**: 丰富的 BI 可视化选项
+4. **报告生成**: 自动化的 BI 报告系统
+5. **通知分发**: 实时的 BI 结果通知
+
+### 🏢 **企业级 BI 功能**
+- **多租户支持**: 企业级 BI 数据隔离
+- **API Key 管理**: 安全的 BI 服务间通信
+- **Webhook 集成**: 实时的 BI 事件通知
+- **性能优化**: 企业级 BI 查询优化
+- **安全审计**: 完整的 BI 操作日志
+
+### 🚀 **BI 集成示例**
+```go
+// 创建 BI 客户端
+biClient := gobi.NewBIClient("https://your-bi-instance.com")
+biClient.SetAPIKey("your-bi-api-key")
+
+// 生成 BI 报告
+report := &gobi.BIReport{
+    Name: "销售 BI 分析",
+    Charts: []gobi.Chart{
+        {Type: "3d_surface", Data: salesData},
+        {Type: "funnel", Data: conversionData},
+    },
+    Schedule: "0 9 * * *", // 每天上午9点
+    Webhook: "https://your-app.com/bi-webhooks",
+}
+
+// 提交 BI 报告任务
+result, err := biClient.CreateReport(report)
+```
+
+---
+
+## 📈 为什么选择 Gobi 作为您的 BI 解决方案？
+
+### ✅ **Go 原生优势**
+- **高性能**: Go 语言的高并发和低延迟特性
+- **简单部署**: 单一二进制文件，无依赖
+- **内存效率**: 优化的内存使用，适合大规模 BI 部署
+- **跨平台**: 支持 Linux、Windows、macOS
+
+### ✅ **现代 BI 架构**
+- **微服务友好**: 轻量级设计，适合微服务架构
+- **云原生**: 支持容器化部署和云环境
+- **API 驱动**: 现代化的 API 优先设计
+- **可扩展**: 模块化架构，易于扩展
+
+### ✅ **企业级特性**
+- **安全可靠**: 企业级安全特性和数据保护
+- **高可用**: 支持集群部署和负载均衡
+- **监控完善**: 完整的性能监控和日志记录
+- **文档齐全**: 详细的 API 文档和使用指南
+
+---
+
+## 🤝 贡献
+
+我们欢迎所有形式的贡献！请查看我们的 [贡献指南](./CONTRIBUTING.md) 了解如何参与项目开发。
+
+### 🐛 报告问题
+如果您发现任何问题或有功能建议，请 [创建 Issue](https://github.com/sy-vendor/gobi/issues)。
+
+### 💡 功能请求
+如果您有新的 BI 功能想法，请使用我们的 [BI 功能请求模板](/.github/ISSUE_TEMPLATE/bi-feature-request.md)。
+
+---
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](./LICENSE) 文件了解详情。
+
+---
+
+**Gobi - 您的 Go 原生商业智能解决方案** 🚀 
