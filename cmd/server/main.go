@@ -11,7 +11,6 @@ import (
 	"gobi/pkg/database"
 	"gobi/pkg/errors"
 	"gobi/pkg/utils"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,22 +30,17 @@ import (
 type ConsoleAlertChannel struct{}
 
 func (c *ConsoleAlertChannel) SendAlert(alert *errors.Alert) error {
-	log.Printf("ALERT: [%s] %s - %s", alert.Severity, alert.Type, alert.Message)
-	if alert.Details != nil {
-		log.Printf("Details: %+v", alert.Details)
-	}
+	utils.Logger.WithFields(map[string]interface{}{
+		"severity": alert.Severity,
+		"type":     alert.Type,
+		"message":  alert.Message,
+		"details":  alert.Details,
+	}).Error("ALERT")
 	return nil
 }
 
-func main() {
-	_ = godotenv.Load()
-
-	// 加载配置
-	if err := config.LoadConfig(); err != nil {
-		log.Fatal("Failed to load config:", err)
-	}
-	cfg := config.GetConfig()
-
+// setupServer 设置和配置服务器
+func setupServer(cfg *config.Config) (*http.Server, error) {
 	// 初始化错误监控
 	errorMonitor := errors.GetGlobalMonitor()
 	defer errorMonitor.Stop()
@@ -55,14 +49,14 @@ func main() {
 	consoleAlertChannel := &ConsoleAlertChannel{}
 	errorMonitor.AddAlertChannel(consoleAlertChannel)
 
+	// 初始化数据库
 	if err := database.InitDB(cfg); err != nil {
-		utils.Logger.Fatalf("Failed to initialize database: %v", err)
+		return nil, errors.WrapError(err, "Failed to initialize database")
 	}
 	db := database.GetDB()
 
 	// 初始化连接管理器
 	database.InitConnectionManager(cfg)
-
 	defer database.CloseAllConnections()
 
 	// 初始化智能缓存
@@ -107,13 +101,9 @@ func main() {
 	r := gin.New()
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-			"http://127.0.0.1:5173",
-		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type", "Accept", "X-Requested-With"},
-		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		AllowOrigins:     cfg.Security.CORSOrigins,
+		AllowMethods:     cfg.Security.AllowedMethods,
+		AllowHeaders:     cfg.Security.AllowedHeaders,
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
@@ -239,22 +229,59 @@ func main() {
 		Handler: r,
 	}
 
+	return srv, nil
+}
+
+// gracefulShutdown 优雅关闭服务器
+func gracefulShutdown(srv *http.Server, timeout time.Duration) error {
+	utils.Logger.Info("Shutting down server gracefully...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		utils.Logger.WithError(err).Error("Server forced to shutdown")
+		return err
+	}
+
+	utils.Logger.Info("Server exited gracefully")
+	return nil
+}
+
+func main() {
+	_ = godotenv.Load()
+
+	// 加载配置
+	if err := config.LoadConfig(); err != nil {
+		utils.Logger.WithError(err).Fatal("Failed to load config")
+		os.Exit(1)
+	}
+	cfg := config.GetConfig()
+
+	// 设置服务器
+	srv, err := setupServer(cfg)
+	if err != nil {
+		utils.Logger.WithError(err).Fatal("Failed to setup server")
+		os.Exit(1)
+	}
+
+	// 启动服务器
 	go func() {
+		utils.Logger.WithField("port", cfg.Server.Port).Info("Starting server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			utils.Logger.WithError(err).Fatal("Server failed to start")
+			os.Exit(1)
 		}
 	}()
 
+	// 等待中断信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown: ", err)
+	// 优雅关闭
+	if err := gracefulShutdown(srv, 5*time.Second); err != nil {
+		utils.Logger.WithError(err).Error("Failed to shutdown gracefully")
+		os.Exit(1)
 	}
-
-	log.Println("Server exiting")
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"time"
 
 	"github.com/xuri/excelize/v2"
@@ -199,7 +199,8 @@ func main() {
 	// 保存文件
 	filename := fmt.Sprintf("sales_chart_daily_report_template_%s.xlsx", time.Now().Format("20060102_150405"))
 	if err := f.SaveAs(filename); err != nil {
-		log.Fatal("保存文件失败:", err)
+		fmt.Printf("保存文件失败: %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("销售柱状图日报模板已生成: %s\n", filename)
