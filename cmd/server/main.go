@@ -100,6 +100,12 @@ func setupServer(cfg *config.Config) (*http.Server, error) {
 
 	r := gin.New()
 
+	if len(cfg.Security.TrustedProxies) > 0 {
+		if err := r.SetTrustedProxies(cfg.Security.TrustedProxies); err != nil {
+			utils.Logger.WithError(err).Warn("Failed to set trusted proxies")
+		}
+	}
+
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.Security.CORSOrigins,
 		AllowMethods:     cfg.Security.AllowedMethods,
