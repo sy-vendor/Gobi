@@ -101,6 +101,7 @@ type SecurityConfig struct {
 	CORSOrigins    []string             `mapstructure:"cors_origins"`
 	AllowedHeaders []string             `mapstructure:"allowed_headers"`
 	AllowedMethods []string             `mapstructure:"allowed_methods"`
+	ExposeHeaders  []string             `mapstructure:"expose_headers"`
 	TrustedProxies []string             `mapstructure:"trusted_proxies"`
 	APIKeyLength   int                  `mapstructure:"api_key_length"`
 	PasswordPolicy PasswordPolicyConfig `mapstructure:"password_policy"`

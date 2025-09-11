@@ -110,11 +110,21 @@ func setupServer(cfg *config.Config) (*http.Server, error) {
 		AllowOrigins:     cfg.Security.CORSOrigins,
 		AllowMethods:     cfg.Security.AllowedMethods,
 		AllowHeaders:     cfg.Security.AllowedHeaders,
+		ExposeHeaders:    cfg.Security.ExposeHeaders,
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
-	rate, _ := limiterlib.NewRateFromFormatted("10-S")
+	// 限流：从配置读取，默认 10-S
+	ratePattern := cfg.Security.RateLimit
+	if ratePattern == "" {
+		ratePattern = "10-S"
+	}
+	rate, err := limiterlib.NewRateFromFormatted(ratePattern)
+	if err != nil {
+		utils.Logger.WithError(err).Warn("Invalid rate limit format, fallback to 10-S")
+		rate, _ = limiterlib.NewRateFromFormatted("10-S")
+	}
 	store := memory.NewStore()
 	instance := ginlimiter.NewMiddleware(limiterlib.New(store, rate))
 	r.Use(instance)
@@ -231,8 +241,11 @@ func setupServer(cfg *config.Config) (*http.Server, error) {
 	}
 
 	srv := &http.Server{
-		Addr:    ":" + cfg.Server.Port,
-		Handler: r,
+		Addr:              ":" + cfg.Server.Port,
+		Handler:           r,
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		ReadHeaderTimeout: cfg.Server.ReadTimeout,
 	}
 
 	return srv, nil
@@ -286,7 +299,7 @@ func main() {
 	<-quit
 
 	// 优雅关闭
-	if err := gracefulShutdown(srv, 5*time.Second); err != nil {
+	if err := gracefulShutdown(srv, cfg.Server.GracefulTimeout); err != nil {
 		utils.Logger.WithError(err).Error("Failed to shutdown gracefully")
 		os.Exit(1)
 	}
